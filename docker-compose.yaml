@@ -1,0 +1,70 @@
+version: "3.8"
+
+services:
+  jwt_srv:
+    image: s3aofwisd0m/sow-library:sow-jwt
+    container_name: jwt_srv
+    env_file:
+      - .env
+    ports:
+      - "5304:5304"
+    depends_on:
+      - mongodb
+      - postgresdb
+    networks:
+      - sow_network
+
+  library_srv:
+    image: s3aofwisd0m/sow-library:sow-library
+    container_name: library_srv
+    env_file:
+      - .env
+    ports:
+      - "8060:8060"
+      - "8005:8005"
+    depends_on:
+      - mongodb
+      - postgresdb
+    networks:
+      - sow_network
+
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    env_file:
+      - .env
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    command: --auth
+    networks:
+      - sow_network
+
+  postgresdb:
+    image: postgres
+    container_name: postgresdb
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "7575:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB_NAME}
+    volumes:
+      - postgresdb_data:/var/lib/postgresql/data
+    networks:
+      - sow_network
+
+volumes:
+  mongodb_data:
+  postgresdb_data:
+
+networks:
+  sow_network:
+    external: true

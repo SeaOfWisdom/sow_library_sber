@@ -1,0 +1,1110 @@
+definitions:
+  rest.AuthResp:
+    properties:
+      jwt_token:
+        type: string
+      nickname:
+        example: phd ***** destroyer
+        type: string
+      role:
+        allOf:
+        - $ref: '#/definitions/storage.ParticipantRole'
+        example: 1
+    type: object
+  rest.BasicInfo:
+    properties:
+      nickname:
+        example: phd ***** destroyer
+        type: string
+      role:
+        allOf:
+        - $ref: '#/definitions/storage.ParticipantRole'
+        example: 1
+    type: object
+  rest.BasicInfoUpdateRequest:
+    properties:
+      nickname:
+        example: phd ***** destroyer
+        type: string
+    type: object
+  rest.BecomeAuthorDataResp:
+    properties:
+      sciences:
+        items:
+          type: string
+        type: array
+    type: object
+  rest.BecomeAuthorRequest:
+    properties:
+      email_address:
+        example: mr_math_phd@science.com
+        type: string
+      language:
+        type: string
+      middlename:
+        type: string
+      name:
+        type: string
+      orcid:
+        type: string
+      scholar_ship_profile:
+        type: string
+      sciences:
+        items:
+          type: string
+        type: array
+      surname:
+        type: string
+    type: object
+  rest.BecomeValidatorRequest:
+    properties:
+      email_address:
+        description: mandatory
+        type: string
+      language:
+        description: mandatory
+        type: string
+      middlename:
+        type: string
+      name:
+        description: mandatory
+        type: string
+      orcid:
+        type: string
+      sciences:
+        items:
+          type: string
+        type: array
+      surname:
+        description: mandatory
+        type: string
+    type: object
+  rest.ErrorMsg:
+    properties:
+      error:
+        example: null request param
+        type: string
+    type: object
+  rest.IfParticipantExistsResp:
+    properties:
+      result:
+        example: true
+        type: boolean
+    type: object
+  rest.NewParticipantRequest:
+    properties:
+      nickname:
+        example: phd ***** destroyer
+        type: string
+      web3_address:
+        type: string
+    type: object
+  rest.PublishWorkDataResp:
+    properties:
+      tags:
+        items:
+          type: string
+        type: array
+    type: object
+  rest.SuccessMsg:
+    properties:
+      status:
+        example: OK
+        type: string
+    type: object
+  rest.UpdateAuthorRequest:
+    properties:
+      email_address:
+        type: string
+      language:
+        type: string
+      middlename:
+        type: string
+      name:
+        type: string
+      orcid:
+        type: string
+      scholar_ship_profile:
+        type: string
+      sciences:
+        items:
+          type: string
+        type: array
+      surname:
+        type: string
+    type: object
+  rest.UpdateValidatorRequest:
+    properties:
+      email_address:
+        type: string
+      language:
+        type: string
+      middlename:
+        type: string
+      name:
+        type: string
+      orcid:
+        type: string
+      sciences:
+        items:
+          type: string
+        type: array
+      surname:
+        type: string
+    type: object
+  rest.WorkReviewRequest:
+    properties:
+      review:
+        $ref: '#/definitions/storage.WorkReview'
+    type: object
+  storage.Author:
+    properties:
+      email_address:
+        type: string
+      language:
+        type: string
+      middlename:
+        type: string
+      name:
+        type: string
+      orcid:
+        type: string
+      scholar_ship_profile:
+        type: string
+      sciences:
+        items:
+          type: string
+        type: array
+      surname:
+        type: string
+    type: object
+  storage.AuthorResponse:
+    properties:
+      author_info:
+        $ref: '#/definitions/storage.Author'
+      basic_info:
+        $ref: '#/definitions/storage.Participant'
+    type: object
+  storage.Participant:
+    properties:
+      language:
+        description: '''ru'', ''en'''
+        type: string
+      nickname:
+        type: string
+      role:
+        $ref: '#/definitions/storage.ParticipantRole'
+      web3Address:
+        type: string
+    type: object
+  storage.ParticipantRole:
+    enum:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    type: integer
+    x-enum-comments:
+      AdminRole: 5 Admin
+      AdvisorRole: 3 Advisor
+      AuthorRole: 2 Author
+      GuestRole: 0 Guest
+      ReaderRole: 1 Reader
+      ValidatorRole: 4 Validator
+    x-enum-varnames:
+    - GuestRole
+    - ReaderRole
+    - AuthorRole
+    - AdvisorRole
+    - ValidatorRole
+    - AdminRole
+  storage.Validator:
+    properties:
+      diploma_id:
+        description: referrenceKey
+        type: string
+      email_address:
+        type: string
+      language:
+        type: string
+      middlename:
+        type: string
+      name:
+        type: string
+      orcid:
+        type: string
+      sciences:
+        items:
+          type: string
+        type: array
+      surname:
+        type: string
+    type: object
+  storage.ValidatorResponse:
+    properties:
+      basic_info:
+        $ref: '#/definitions/storage.Participant'
+      validator_info:
+        $ref: '#/definitions/storage.Validator'
+    type: object
+  storage.Work:
+    properties:
+      annotation:
+        type: string
+      content:
+        allOf:
+        - $ref: '#/definitions/storage.WorkContent'
+        description: BODY INFORMATION
+      created_at:
+        type: string
+      id:
+        description: BASE INFORMATION
+        type: string
+      language:
+        type: string
+      name:
+        type: string
+      price:
+        type: string
+      sources:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+    type: object
+  storage.WorkContent:
+    properties:
+      work_data:
+        type: string
+    type: object
+  storage.WorkResponse:
+    properties:
+      author_info:
+        $ref: '#/definitions/storage.AuthorResponse'
+      bookmarked:
+        type: boolean
+      work:
+        $ref: '#/definitions/storage.Work'
+    type: object
+  storage.WorkReview:
+    properties:
+      body:
+        allOf:
+        - $ref: '#/definitions/storage.WorkReviewBody'
+        description: BODY REVIEW
+      created_date:
+        type: string
+      id:
+        type: string
+      language:
+        type: string
+      updated_date:
+        type: string
+      work_id:
+        type: string
+    type: object
+  storage.WorkReviewBody:
+    properties:
+      questionnaire:
+        $ref: '#/definitions/storage.WorkReviewQuestionnaire'
+      review:
+        type: string
+    type: object
+  storage.WorkReviewQuestionnaire:
+    properties:
+      questions:
+        additionalProperties:
+          type: integer
+        description: 0 - не согласен, 4 - согласен
+        type: object
+    type: object
+info:
+  contact: {}
+paths:
+  /add_bookmark:
+    get:
+      consumes:
+      - application/json
+      description: TODO
+      parameters:
+      - description: work id to add into bookmarks
+        in: path
+        name: work_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/storage.WorkResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+      summary: TODO
+      tags:
+      - Bookmarks
+  /auth:
+    get:
+      consumes:
+      - application/json
+      description: Auth account and return JWT token
+      parameters:
+      - description: participant web3 address
+        in: path
+        name: web3_address
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/rest.AuthResp'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+      summary: Auth account
+      tags:
+      - Authorization
+  /author_data:
+    get:
+      consumes:
+      - application/json
+      description: TODO
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/rest.BecomeAuthorDataResp'
+      summary: TODO
+      tags:
+      - Authors
+  /author_info:
+    get:
+      consumes:
+      - application/json
+      description: TODO
+      parameters:
+      - description: author web3 address
+        in: path
+        name: web3_address
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/storage.AuthorResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+      summary: TODO
+      tags:
+      - Authors
+  /become_author:
+    post:
+      consumes:
+      - application/json
+      description: TODO
+      parameters:
+      - description: update author info
+        in: body
+        name: account
+        required: true
+        schema:
+          $ref: '#/definitions/rest.BecomeAuthorRequest'
+      - description: Bearer {JWT token}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/rest.AuthResp'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+      summary: TODO
+      tags:
+      - Authors
+  /become_validator:
+    post:
+      consumes:
+      - application/json
+      description: Become a validator
+      parameters:
+      - description: become validator
+        in: body
+        name: account
+        required: true
+        schema:
+          $ref: '#/definitions/rest.BecomeValidatorRequest'
+      - description: Bearer {JWT token}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/rest.AuthResp'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+      summary: Become a validator
+      tags:
+      - Validators
+  /bookmarks:
+    get:
+      consumes:
+      - application/json
+      description: TODO
+      parameters:
+      - description: Bearer {JWT token}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/storage.WorkResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+      summary: TODO
+      tags:
+      - Bookmarks
+  /get_basic_info:
+    post:
+      consumes:
+      - application/json
+      description: TODO
+      parameters:
+      - description: Bearer {JWT token}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/rest.BasicInfo'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+      summary: TODO
+      tags:
+      - Participants
+  /if_participant_exists:
+    get:
+      consumes:
+      - application/json
+      description: TODO
+      parameters:
+      - description: participant web3 address
+        in: path
+        name: web3_address
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/rest.IfParticipantExistsResp'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+      summary: TODO
+      tags:
+      - Participants
+  /invite_co_author:
+    post:
+      consumes:
+      - application/json
+      description: TODO
+      parameters:
+      - description: update author info
+        in: body
+        name: account
+        required: true
+        schema:
+          $ref: '#/definitions/rest.BecomeAuthorRequest'
+      - description: Bearer {JWT token}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/rest.SuccessMsg'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+      summary: TODO
+      tags:
+      - Authors
+  /new_participant:
+    post:
+      consumes:
+      - application/json
+      description: Become a new participant
+      parameters:
+      - description: become participant
+        in: body
+        name: account
+        required: true
+        schema:
+          $ref: '#/definitions/rest.NewParticipantRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/rest.AuthResp'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+      summary: Become a participant
+      tags:
+      - Participants
+  /publish_work:
+    post:
+      consumes:
+      - application/json
+      description: Publish a new work
+      parameters:
+      - description: Bearer {JWT token}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: work and author info
+        in: body
+        name: Work
+        required: true
+        schema:
+          $ref: '#/definitions/storage.WorkResponse'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/storage.WorkResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+      summary: Publish a new work
+      tags:
+      - Publish work
+  /purchase_work:
+    post:
+      consumes:
+      - application/json
+      description: TODO
+      parameters:
+      - description: work id to purchase
+        in: path
+        name: work_id
+        required: true
+        type: string
+      - description: Bearer {JWT token}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/rest.SuccessMsg'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+      summary: TODO
+      tags:
+      - Purchasing works
+  /purchased_works:
+    get:
+      consumes:
+      - application/json
+      description: TODO
+      parameters:
+      - description: Bearer {JWT token}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/storage.WorkResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+      summary: TODO
+      tags:
+      - Purchasing works
+  /remove_bookmark:
+    post:
+      consumes:
+      - application/json
+      description: TODO
+      parameters:
+      - description: author web3 address
+        in: path
+        name: web3_address
+        required: true
+        type: string
+      - description: Bearer {JWT token}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/rest.SuccessMsg'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+      summary: TODO
+      tags:
+      - Bookmarks
+  /submit_work_review:
+    post:
+      consumes:
+      - application/json
+      description: Submit work review by validator
+      parameters:
+      - description: work id
+        in: path
+        name: work_id
+        required: true
+        type: string
+      - description: review status
+        enum:
+        - WORK_REVIEW_SUBMITTED
+        - WORK_REVIEW_SKIPPED
+        - WORK_REVIEW_REJECTED
+        - WORK_REVIEW_DECLINED
+        - WORK_REVIEW_ACCEPTED
+        in: path
+        name: status
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/rest.SuccessMsg'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+      summary: Submit review
+      tags:
+      - Work review
+  /update_author_info:
+    post:
+      consumes:
+      - application/json
+      description: TODO
+      parameters:
+      - description: update author info
+        in: body
+        name: account
+        required: true
+        schema:
+          $ref: '#/definitions/rest.UpdateAuthorRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/rest.AuthResp'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+      summary: TODO
+      tags:
+      - Authors
+  /update_basic_info:
+    post:
+      consumes:
+      - application/json
+      description: TODO
+      parameters:
+      - description: update basic participant info
+        in: body
+        name: account
+        required: true
+        schema:
+          $ref: '#/definitions/rest.BasicInfoUpdateRequest'
+      - description: Bearer {JWT token}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/rest.AuthResp'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+      summary: TODO
+      tags:
+      - Participants
+  /update_review:
+    post:
+      consumes:
+      - application/json
+      description: Evaluate work by validator
+      parameters:
+      - description: work review
+        in: body
+        name: account
+        required: true
+        schema:
+          $ref: '#/definitions/rest.WorkReviewRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/storage.WorkReview'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+      summary: Evaluate work
+      tags:
+      - Work review
+  /update_validator_info:
+    post:
+      consumes:
+      - application/json
+      description: Update validator info
+      parameters:
+      - description: update validator info
+        in: body
+        name: account
+        required: true
+        schema:
+          $ref: '#/definitions/rest.UpdateValidatorRequest'
+      - description: Bearer {JWT token}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/rest.AuthResp'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+      summary: Update validator
+      tags:
+      - Validators
+  /upload_doc:
+    put:
+      consumes:
+      - application/json
+      description: TODO
+      parameters:
+      - description: work id
+        in: path
+        name: doc_type
+        required: true
+        type: string
+      - description: Bearer {JWT token}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/rest.SuccessMsg'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+      summary: TODO
+      tags:
+      - Docs
+  /validator_info:
+    get:
+      consumes:
+      - application/json
+      description: Validator full info
+      parameters:
+      - description: validator web3 address
+        in: path
+        name: web3_address
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/storage.ValidatorResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+      summary: Validator info
+      tags:
+      - Validators
+  /work_data:
+    get:
+      consumes:
+      - application/json
+      description: TODO
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/rest.PublishWorkDataResp'
+      summary: TODO
+      tags:
+      - Publish work
+  /work_review:
+    get:
+      consumes:
+      - application/json
+      description: Get all work reviews by work id
+      parameters:
+      - description: work id
+        in: path
+        name: work_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/storage.WorkReview'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+      summary: Work reviews
+      tags:
+      - Work review
+  /work_reviews:
+    get:
+      consumes:
+      - application/json
+      description: TODO
+      parameters:
+      - description: work id
+        in: path
+        name: work_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/storage.WorkReview'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+      summary: TODO
+      tags:
+      - Work review
+  /works:
+    get:
+      consumes:
+      - application/json
+      description: TODO
+      parameters:
+      - description: work id
+        in: path
+        name: work_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/storage.WorkResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+      summary: TODO
+      tags:
+      - Works
+  /works/author:
+    get:
+      consumes:
+      - application/json
+      description: TODO
+      parameters:
+      - description: author web3 address
+        in: path
+        name: web3_address
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/storage.WorkResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+      summary: TODO
+      tags:
+      - Works
+  /works_by_key_words:
+    get:
+      consumes:
+      - application/json
+      description: TODO
+      parameters:
+      - description: words to search for
+        in: path
+        name: key_words
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/storage.WorkResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+      summary: TODO
+      tags:
+      - Works
+swagger: "2.0"
