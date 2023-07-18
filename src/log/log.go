@@ -24,7 +24,7 @@ func NewLogger() *Logger {
 
 	logLevel, err := logrus.ParseLevel(os.Getenv(EnvLevel))
 	if err != nil {
-		inst.Warn("Logger: %s", err)
+		inst.Warnf("Logger: %s", err)
 		logLevel = logrus.InfoLevel
 	}
 

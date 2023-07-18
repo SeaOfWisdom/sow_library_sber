@@ -7,6 +7,34 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// HandleFaucet  Faucet godoc
+// @Summary      Faucet SOW tokens
+// @Description  Mints 50 SOW tokens to web3_address
+// @Tags         Faucet
+// @Accept       json
+// @Produce      json
+// @Param        web3_address   path      string  true  "participant web3 address"
+// @Success      200  {object}   string
+// @Failure      400  {object}  ErrorMsg
+// @Router       /faucet [get]
+func (rs *RestSrv) HandleFaucet(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	web3AddrStr, ok := vars["web3_address"]
+	if !ok {
+		responError(w, http.StatusBadRequest, "null request param")
+		return
+	}
+	rs.logger.Info(fmt.Sprintf("request address: %s", web3AddrStr))
+
+	txHash, err := rs.libSrv.Faucet(web3AddrStr)
+	if err != nil {
+		responError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+
+	responJSON(w, http.StatusOK, txHash)
+}
+
 // HandleAuth Auth godoc
 // @Summary      Auth account
 // @Description  Auth account and return JWT token
@@ -16,7 +44,7 @@ import (
 // @Param        web3_address   path      string  true  "participant web3 address"
 // @Success      200  {object}   AuthResp
 // @Failure      400  {object}  ErrorMsg
-// @Router       /auth [get]
+// @Router       /auth/{web3_address} [get]
 func (rs *RestSrv) HandleAuth(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	web3AddrStr, ok := vars["web3_address"]
@@ -76,16 +104,16 @@ func (rs *RestSrv) HandleNewParticipant(w http.ResponseWriter, r *http.Request) 
 	responJSON(w, http.StatusOK, AuthResp{Token: jwt.Token, Role: participant.Role, NickName: request.NickName})
 }
 
-// IfParticipantExists godoc
-// @Summary      TODO
-// @Description  TODO
+// HandleIfParticipantExists IfParticipantExists godoc
+// @Summary      Check if participant exists
+// @Description  Check participant availability
 // @Tags         Participants
 // @Accept       json
 // @Produce      json
 // @Param        web3_address   path      string  true  "participant web3 address"
 // @Success      200  {object}   IfParticipantExistsResp
 // @Failure      400  {object}  ErrorMsg
-// @Router       /if_participant_exists [get]
+// @Router       /if_participant_exists/{web3_address} [get]
 func (rs *RestSrv) HandleIfParticipantExists(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	web3AddrStr, ok := vars["web3_address"]
@@ -104,18 +132,18 @@ func (rs *RestSrv) HandleIfParticipantExists(w http.ResponseWriter, r *http.Requ
 	responJSON(w, http.StatusOK, IfParticipantExistsResp{Result: true})
 }
 
-// UpdataBasicPacticipant godoc
-// @Summary     TODO
-// @Description TODO
+// HandleUpdateBasicParticipant UpdateBasicParticipant godoc
+// @Summary     Update participant info
+// @Description Update basic participant info
 // @Tags		Participants
 // @Accept      json
 // @Produce     json
 // @Param       account body BasicInfoUpdateRequest true "update basic participant info"
-// @param		Authorization header string true "Bearer {JWT token}"
 // @Success     200  {object}   AuthResp
 // @Failure     400  {object}  ErrorMsg
+// @Security Bearer
 // @Router		/update_basic_info [post]
-func (rs *RestSrv) HandleUpdataBasicPacticipant(w http.ResponseWriter, r *http.Request) {
+func (rs *RestSrv) HandleUpdateBasicParticipant(w http.ResponseWriter, r *http.Request) {
 	web3Address, err := rs.getWeb3Address(r)
 	if err != nil {
 		responError(w, http.StatusBadGateway, err.Error())
@@ -144,15 +172,15 @@ func (rs *RestSrv) HandleUpdataBasicPacticipant(w http.ResponseWriter, r *http.R
 	responJSON(w, http.StatusOK, AuthResp{Token: jwt.Token, Role: participant.Role, NickName: request.NickName})
 }
 
-// GetBasicInfo godoc
-// @Summary		TODO
-// @Description TODO
+// HandleGetBasicInfo GetBasicInfo godoc
+// @Summary		Get info
+// @Description Get basic info
 // @Tags        Participants
 // @Accept      json
 // @Produce     json
-// @Param 		Authorization header string true "Bearer {JWT token}"
 // @Success     200  {object}  BasicInfo
 // @Failure     400  {object}  ErrorMsg
+// @Security Bearer
 // @Router      /get_basic_info [post]
 func (rs *RestSrv) HandleGetBasicInfo(w http.ResponseWriter, r *http.Request) {
 	web3Address, err := rs.getWeb3Address(r)

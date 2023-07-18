@@ -78,8 +78,8 @@ func (ss *StorageSrv) GetParticipantByAddress(address string) (participant *Part
 }
 
 func (ss *StorageSrv) GetParticipantWorkByID(workID string) (work *ParticipantsWork, err error) {
-	if err = ss.psqlDB.Where("work_id = ?", workID).Find(&work).Error; err != nil {
-		return
+	if ss.psqlDB.Where("work_id = ?", workID).Find(&work).Error != nil {
+		return nil, ss.psqlDB.Where("work_id = ?", workID).Find(&work).Error
 	}
 
 	if work.ID == "" {
@@ -175,11 +175,10 @@ func (ss *StorageSrv) getAllParticipantsWorks() []*ParticipantsWork {
 	var works []*ParticipantsWork
 	if err := ss.psqlDB.Where("status <> ?", DeclinedWorkStatus).Find(&works).Error; err != nil {
 		ss.log.Error(fmt.Sprintf("while getAllParticipantWorks, err: %v", err))
+
 		return nil
 	}
-	if len(works) == 0 {
-		return nil
-	}
+
 	return works
 }
 

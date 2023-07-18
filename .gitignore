@@ -1,6 +1,2 @@
 .env
 local/
-/become_author.sh
-/delete_paper.sh
-/post_new_participant.sh
-/get_basic_info.sh

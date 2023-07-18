@@ -139,11 +139,12 @@ func StringToReviewStatus(val string) (out WorkReviewStatus) {
 }
 
 type WorkReview struct {
-	ID        string    `json:"id"`
-	WorkID    string    `bson:"work_id" json:"work_id"`
-	CreatedAt time.Time `bson:"created_at" json:"created_date"`
-	UpdatedAt time.Time `bson:"updated_at" json:"updated_date"`
-	Language  string    `bson:"language" json:"language"`
+	ID        string           `json:"id"`
+	WorkID    string           `bson:"work_id" json:"work_id"`
+	CreatedAt time.Time        `bson:"created_at" json:"created_date"`
+	UpdatedAt time.Time        `bson:"updated_at" json:"updated_date"`
+	Language  string           `bson:"language" json:"language"`
+	Status    WorkReviewStatus `bson:"status" json:"status"`
 	// BODY REVIEW
 	Body *WorkReviewBody `json:"body"`
 }

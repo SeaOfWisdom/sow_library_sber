@@ -9,6 +9,51 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// HandleWorkByID Work by id
+// @Summary      Work by id
+// @Description  Get work by id
+// @Tags         Works
+// @Accept       json
+// @Produce      json
+// @Param        work_id   path      string  true  "work id"
+// @Success 	200 {object} []storage.WorkResponse
+// @Failure      400  {object}  ErrorMsg
+// @Failure      404  {object}  ErrorMsg
+// @Security Bearer
+// @Router       /works/{work_id} [get]
+func (rs *RestSrv) HandleWorkByID(w http.ResponseWriter, r *http.Request) {
+	web3Address, err := rs.getWeb3Address(r)
+	if err != nil {
+		responError(w, http.StatusUnauthorized, fmt.Sprintf("while getting the decoding the jwt token, err: %v", err))
+
+		return
+	}
+
+	vars := mux.Vars(r)
+	workID, ok := vars["work_id"]
+	if !ok {
+		responError(w, http.StatusBadRequest, "null request param")
+
+		return
+	}
+	rs.logger.Info(fmt.Sprintf("request work id: %s", workID))
+
+	work, err := rs.libSrv.GetWorkByID(web3Address, workID)
+	if err != nil {
+		responError(w, http.StatusInternalServerError, err.Error())
+
+		return
+	}
+
+	if work == nil {
+		responError(w, http.StatusNotFound, "work was not found")
+
+		return
+	}
+
+	responJSON(w, http.StatusOK, work)
+}
+
 // HandleAllWorks AllWorks godoc
 // @Summary      Get all works
 // @Description  Get all works depends on role
@@ -25,6 +70,7 @@ func (rs *RestSrv) HandleAllWorks(w http.ResponseWriter, r *http.Request) {
 			web3Address = ""
 		} else {
 			responError(w, http.StatusUnauthorized, fmt.Sprintf("while getting the decoding the jwt token, err: %v", err))
+
 			return
 		}
 	}
@@ -35,24 +81,20 @@ func (rs *RestSrv) HandleAllWorks(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
-	if works == nil {
-		responError(w, http.StatusOK, "there are no works in the library")
-
-		return
-	}
 
 	responJSON(w, http.StatusOK, works)
 }
 
-// WorkByKeyWords godoc
-// @Summary      TODO
-// @Description  TODO
+// HandleWorkByKeyWords WorkByKeyWords godoc
+// @Summary      Get all works by words
+// @Description  Search works by particular words
 // @Tags         Works
 // @Accept       json
 // @Produce      json
 // @Param        key_words   path      string  true  "words to search for"
 // @Success 	200 {object} []storage.WorkResponse
 // @Failure      400  {object}  ErrorMsg
+// @Security Bearer
 // @Router       /works_by_key_words [get]
 func (rs *RestSrv) HandleWorkByKeyWords(w http.ResponseWriter, r *http.Request) {
 	web3Address, err := rs.getWeb3Address(r)
@@ -92,7 +134,7 @@ func (rs *RestSrv) HandleWorkByKeyWords(w http.ResponseWriter, r *http.Request) 
 	responJSON(w, http.StatusOK, works)
 }
 
-// PublishWorkData godoc
+// HandlePublishWorkData PublishWorkData godoc
 // @Summary      TODO
 // @Description  TODO
 // @Tags         Publish work
@@ -116,6 +158,7 @@ func (rs *RestSrv) HandlePublishWorkData(w http.ResponseWriter, r *http.Request)
 // @Success 	200 {object} storage.WorkResponse
 // @Failure      400  {object}  ErrorMsg
 // @Failure      401  {object}  ErrorMsg
+// @Security Bearer
 // @Router       /publish_work [post]
 func (rs *RestSrv) HandlePublishWork(w http.ResponseWriter, r *http.Request) {
 	// get address from the JWT token
@@ -144,53 +187,17 @@ func (rs *RestSrv) HandlePublishWork(w http.ResponseWriter, r *http.Request) {
 	responJSON(w, http.StatusOK, workResp)
 }
 
-// WorkByID godoc
-// @Summary      TODO
-// @Description  TODO
-// @Tags         Works
-// @Accept       json
-// @Produce      json
-// @Param        work_id   path      string  true  "work id"
-// @Success 	200 {object} []storage.WorkResponse
-// @Failure      400  {object}  ErrorMsg
-// @Router       /works [get]
-func (rs *RestSrv) HandleWorkByID(w http.ResponseWriter, r *http.Request) {
-	web3Address, err := rs.getWeb3Address(r)
-	if err != nil {
-		responError(w, http.StatusUnauthorized, fmt.Sprintf("while getting the decoding the jwt token, err: %v", err))
-		return
-	}
-
-	vars := mux.Vars(r)
-	workID, ok := vars["work_id"]
-	if !ok {
-		responError(w, http.StatusBadRequest, "null request param")
-		return
-	}
-	rs.logger.Info(fmt.Sprintf("request work id: %s", workID))
-
-	works, err := rs.libSrv.GetWorkByID(web3Address, workID)
-	if err != nil {
-		responError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	if works == nil {
-		responError(w, http.StatusOK, "there are no works in the library")
-		return
-	}
-	responJSON(w, http.StatusOK, works)
-}
-
-// AuthorWorks godoc
-// @Summary      TODO
-// @Description  TODO
+// HandleAuthorWorks AuthorWorks godoc
+// @Summary      List author`s works
+// @Description  Get list author`s works
 // @Tags         Works
 // @Accept       json
 // @Produce      json
 // @Param        web3_address   path      string  true  "author web3 address"
 // @Success 	200 {object} []storage.WorkResponse
 // @Failure      400  {object}  ErrorMsg
-// @Router       /works/author [get]
+// @Security Bearer
+// @Router       /works/author/{web3_address} [get]
 func (rs *RestSrv) HandleAuthorWorks(w http.ResponseWriter, r *http.Request) {
 	// ctx := r.Context()
 	// defer ctx.Done()
@@ -226,18 +233,18 @@ func (rs *RestSrv) HandleAuthorWorks(w http.ResponseWriter, r *http.Request) {
 ///// Purchasing works /////
 ////////////////////////////*/
 
-// PurchaseWork godoc
-// @Summary      TODO
-// @Description  TODO
+// HandlePurchaseWork PurchaseWork godoc
+// @Summary      Purchase work
+// @Description  Purchase particular work
 // @Tags         Purchasing works
 // @Accept       json
 // @Produce      json
 // @Param        work_id   path      string  true  "work id to purchase"
-// @Param		Authorization header string true "Bearer {JWT token}"
 // @Success 	200 {object} SuccessMsg
 // @Failure      400  {object}  ErrorMsg
 // @Failure      401  {object}  ErrorMsg
-// @Router       /purchase_work [post]
+// @Security Bearer
+// @Router       /purchase_work/{work_id} [post]
 func (rs *RestSrv) HandlePurchaseWork(w http.ResponseWriter, r *http.Request) {
 	// get address from the JWT token
 	web3Address, err := rs.getWeb3Address(r)
@@ -265,34 +272,33 @@ func (rs *RestSrv) HandlePurchaseWork(w http.ResponseWriter, r *http.Request) {
 	responJSON(w, http.StatusOK, SuccessMsg{Msg: "OK"})
 }
 
-// PurchasedWorks godoc
-// @Summary      TODO
-// @Description  TODO
+// HandlePurchasedWorks PurchasedWorks godoc
+// @Summary      Purchased works
+// @Description  Get purchased works
 // @Tags         Purchasing works
 // @Accept       json
 // @Produce      json
-// @Param		Authorization header string true "Bearer {JWT token}"
 // @Success 	200 {object} []storage.WorkResponse
 // @Failure      400  {object}  ErrorMsg
 // @Failure      401  {object}  ErrorMsg
+// @Security Bearer
 // @Router       /purchased_works [get]
 func (rs *RestSrv) HandlePurchasedWorks(w http.ResponseWriter, r *http.Request) {
 	// get address from the JWT token
 	web3Address, err := rs.getWeb3Address(r)
 	if err != nil {
 		responError(w, http.StatusUnauthorized, fmt.Sprintf("while getting the decoding the jwt token, err: %v", err))
+
 		return
 	}
 
-	works, err := rs.libSrv.PurchasedWorks(web3Address)
+	works, err := rs.libSrv.PurchasedWorks(r.Context(), web3Address)
 	if err != nil {
 		responError(w, http.StatusBadRequest, err.Error())
+
 		return
 	}
-	if works == nil {
-		responError(w, http.StatusOK, "there are no works in the library")
-		return
-	}
+
 	responJSON(w, http.StatusOK, works)
 }
 
@@ -300,9 +306,9 @@ func (rs *RestSrv) HandlePurchasedWorks(w http.ResponseWriter, r *http.Request) 
 ///// Bookmarks /////
 //////////////////*/
 
-// AddInBookmarks godoc
-// @Summary      TODO
-// @Description  TODO
+// HandleAddInBookmarks AddInBookmarks godoc
+// @Summary      Add a new bookmark
+// @Description  Add a new bookmark to work
 // @Tags		 Bookmarks
 // @Accept       json
 // @Produce      json
@@ -310,7 +316,8 @@ func (rs *RestSrv) HandlePurchasedWorks(w http.ResponseWriter, r *http.Request) 
 // @Success 	200 {object} []storage.WorkResponse
 // @Failure      400  {object}  ErrorMsg
 // @Failure      401  {object}  ErrorMsg
-// @Router       /add_bookmark [get]
+// @Security Bearer
+// @Router       /add_bookmark/{work_id} [get]
 func (rs *RestSrv) HandleAddInBookmarks(w http.ResponseWriter, r *http.Request) {
 	// get the reader's web3 address from the JWT token
 	web3Address, err := rs.getWeb3Address(r)
@@ -338,16 +345,16 @@ func (rs *RestSrv) HandleAddInBookmarks(w http.ResponseWriter, r *http.Request) 
 	responJSON(w, http.StatusOK, SuccessMsg{Msg: "OK"})
 }
 
-// GetBookmarks godoc
-// @Summary      TODO
-// @Description  TODO
+// HandleGetBookmarks GetBookmarks godoc
+// @Summary      Get bookmarks
+// @Description  Get bookmarks
 // @Tags		 Bookmarks
 // @Accept       json
 // @Produce      json
-// @Param		Authorization header string true "Bearer {JWT token}"
 // @Success 	200 {object} []storage.WorkResponse
 // @Failure      400  {object}  ErrorMsg
 // @Failure      401  {object}  ErrorMsg
+// @Security Bearer
 // @Router       /bookmarks [get]
 func (rs *RestSrv) HandleGetBookmarks(w http.ResponseWriter, r *http.Request) {
 	// get the reader's web3 address from the JWT token
@@ -368,9 +375,9 @@ func (rs *RestSrv) HandleGetBookmarks(w http.ResponseWriter, r *http.Request) {
 	responJSON(w, http.StatusOK, bookmarks)
 }
 
-// RemoveFromBookmarks godoc
-// @Summary      TODO
-// @Description  TODO
+// HandleRemoveFromBookmarks RemoveFromBookmarks godoc
+// @Summary      Remove bookmarks
+// @Description  Remove bookmarks
 // @Tags		 Bookmarks
 // @Accept       json
 // @Produce      json
@@ -379,6 +386,7 @@ func (rs *RestSrv) HandleGetBookmarks(w http.ResponseWriter, r *http.Request) {
 // @Success 	200 {object} SuccessMsg
 // @Failure      400  {object}  ErrorMsg
 // @Failure      401  {object}  ErrorMsg
+// @Security Bearer
 // @Router       /remove_bookmark [post]
 func (rs *RestSrv) HandleRemoveFromBookmarks(w http.ResponseWriter, r *http.Request) {
 	// get the reader's web3 address from the JWT token

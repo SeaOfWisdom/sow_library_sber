@@ -3,10 +3,12 @@ package rest
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 
 	srv "github.com/SeaOfWisdom/sow_library/src/service"
 	"github.com/SeaOfWisdom/sow_library/src/service/storage"
+	ocr "github.com/SeaOfWisdom/sow_proto/ocr-srv"
 
 	"github.com/gorilla/mux"
 )
@@ -24,9 +26,9 @@ import (
 // @Accept       json
 // @Produce      json
 // @Param        account body BecomeValidatorRequest true "become validator"
-// @Param 		 Authorization header string true "Bearer {JWT token}"
 // @Success      200  {object}   AuthResp
 // @Failure      400  {object}  ErrorMsg
+// @Security Bearer
 // @Router       /become_validator [post]
 func (rs *RestSrv) HandleBecomeValidator(w http.ResponseWriter, r *http.Request) {
 	web3Address, err := rs.getWeb3Address(r)
@@ -67,7 +69,7 @@ func (rs *RestSrv) HandleBecomeValidator(w http.ResponseWriter, r *http.Request)
 // @Param        web3_address   path      string  true  "validator web3 address"
 // @Success      200  {object}   storage.ValidatorResponse
 // @Failure      400  {object}  ErrorMsg
-// @Router       /validator_info [get]
+// @Router       /validator_info/{web3_address} [get]
 func (rs *RestSrv) HandleValidatorInfo(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	validatorAddress, ok := vars["web3_address"]
@@ -94,9 +96,9 @@ func (rs *RestSrv) HandleValidatorInfo(w http.ResponseWriter, r *http.Request) {
 // @Accept       json
 // @Produce      json
 // @Param        account body UpdateValidatorRequest true "update validator info"
-// @Param 		 Authorization header string true "Bearer {JWT token}"
 // @Success      200  {object}   AuthResp
 // @Failure      400  {object}  ErrorMsg
+// @Security Bearer
 // @Router       /update_validator_info [post]
 func (rs *RestSrv) HandleUpdateValidator(w http.ResponseWriter, r *http.Request) {
 	web3Address, err := rs.getWeb3Address(r)
@@ -136,6 +138,85 @@ func (rs *RestSrv) HandleUpdateValidator(w http.ResponseWriter, r *http.Request)
 	responJSON(w, http.StatusOK, AuthResp{Token: jwt.Token, Role: participant.Role, NickName: participant.NickName})
 }
 
+// HandleUploadValidatorDocs UploadValidatorDocs godoc
+// @Summary      Upload validator documents
+// @Description  Uploading documents confirming competencies of validator
+// @Tags         Validators
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  SuccessMsg
+// @Failure      400  {object}  ErrorMsg
+// @Security Bearer
+// @Router       /validator_info/upload_docs [post]
+func (rs *RestSrv) HandleUploadValidatorDocs(w http.ResponseWriter, r *http.Request) {
+	web3Address, err := rs.getWeb3Address(r)
+	if err != nil {
+		responError(w, http.StatusBadGateway, err.Error())
+
+		return
+	}
+
+	participant, err := rs.libSrv.GetParticipantByWeb3Address(web3Address)
+	if err != nil {
+		responError(w, http.StatusNotFound, err.Error())
+
+		return
+	}
+
+	if participant.Role != storage.ValidatorRole {
+		responError(w, http.StatusForbidden, "your are not a validator")
+
+		return
+	}
+
+	// Parse our multipart form, 10 << 20 specifies a maximum
+	// upload of 10 MB files.
+	r.ParseMultipartForm(10 << 20)
+
+	docType := r.FormValue("type")
+	if docType == "" {
+		responError(w, http.StatusBadRequest, "undefined doc_type param")
+
+		return
+	}
+
+	rs.logger.Info(fmt.Sprintf("doc type: %s", docType))
+
+	file, _, err := r.FormFile("doc")
+	if err != nil {
+		responError(w, http.StatusBadRequest, err.Error())
+
+		return
+	}
+	defer file.Close()
+
+	// read all of the contents of our uploaded file into a
+	// byte array
+
+	/// !!!! TODO !!!!
+	imageBytes, err := ioutil.ReadAll(file)
+	if err != nil {
+		responError(w, http.StatusInternalServerError, "error read file")
+
+		return
+	}
+
+	imageResp, err := rs.ocrSrv.ExtractText(r.Context(), &ocr.ExtractTextRequest{
+		Image: imageBytes,
+	})
+	if err != nil {
+		err = fmt.Errorf("while extract text via ocr service, err: %v", err)
+		rs.logger.Error(err.Error())
+		responError(w, http.StatusInternalServerError, err.Error())
+
+		return
+	}
+
+	fmt.Println(imageResp)
+
+	responJSON(w, http.StatusOK, SuccessMsg{Msg: "OK"})
+}
+
 /*//////////////////////////
 ///// WORK Evaluation /////
 ////////////////////////*/
@@ -149,7 +230,8 @@ func (rs *RestSrv) HandleUpdateValidator(w http.ResponseWriter, r *http.Request)
 // @Param        work_id   path      string  true  "work id"
 // @Success      200  {object}   storage.WorkReview
 // @Failure      400  {object}  ErrorMsg
-// @Router       /work_review [get]
+// @Security Bearer
+// @Router       /work_review/{work_id} [get]
 func (rs *RestSrv) HandleGetWorkReviewByWorkID(w http.ResponseWriter, r *http.Request) {
 	web3Address, err := rs.getWeb3Address(r)
 	if err != nil {
@@ -186,6 +268,7 @@ func (rs *RestSrv) HandleGetWorkReviewByWorkID(w http.ResponseWriter, r *http.Re
 // @Param        account body WorkReviewRequest true "work review"
 // @Success      200  {object}   storage.WorkReview
 // @Failure      400  {object}  ErrorMsg
+// @Security Bearer
 // @Router       /update_review [post]
 func (rs *RestSrv) HandleEvaluateWork(w http.ResponseWriter, r *http.Request) {
 	web3Address, err := rs.getWeb3Address(r)
@@ -224,6 +307,7 @@ func (rs *RestSrv) HandleEvaluateWork(w http.ResponseWriter, r *http.Request) {
 // @Param        status   path      string  true "review status" Enums(WORK_REVIEW_SUBMITTED, WORK_REVIEW_SKIPPED, WORK_REVIEW_REJECTED, WORK_REVIEW_DECLINED, WORK_REVIEW_ACCEPTED)
 // @Success      200  {object}   SuccessMsg
 // @Failure      400  {object}  ErrorMsg
+// @Security Bearer
 // @Router       /submit_work_review [post]
 func (rs *RestSrv) HandleSubmitWorkReview(w http.ResponseWriter, r *http.Request) {
 	web3Address, err := rs.getWeb3Address(r)

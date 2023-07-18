@@ -7,8 +7,9 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// @Summary      TODO
-// @Description  TODO
+// HandleBecomeAuthorData
+// @Summary Get sciences
+// @Description  Get all available sciences
 // @Tags         Authors
 // @Accept       json
 // @Produce      json
@@ -20,16 +21,16 @@ func (rs *RestSrv) HandleBecomeAuthorData(w http.ResponseWriter, r *http.Request
 	})
 }
 
-// BecomeAuthor godoc
-// @Summary      TODO
-// @Description  TODO
+// HandleBecomeAuthor BecomeAuthor godoc
+// @Summary      Become a author
+// @Description  Become a author
 // @Tags         Authors
 // @Accept       json
 // @Produce      json
 // @Param        account body BecomeAuthorRequest true "update author info"
-// @Param 		Authorization header string true "Bearer {JWT token}"
 // @Success      200  {object}  AuthResp
 // @Failure      400  {object}  ErrorMsg
+// @Security Bearer
 // @Router       /become_author [post]
 func (rs *RestSrv) HandleBecomeAuthor(w http.ResponseWriter, r *http.Request) {
 	web3Address, err := rs.getWeb3Address(r)
@@ -61,15 +62,16 @@ func (rs *RestSrv) HandleBecomeAuthor(w http.ResponseWriter, r *http.Request) {
 	responJSON(w, http.StatusOK, AuthResp{Token: jwt.Token, Role: participant.Role})
 }
 
-// @Summary      TODO
-// @Description  TODO
+// HandleInviteCoAuthor
+// @Summary      Invite co-author
+// @Description  Invite co-author
 // @Tags         Authors
 // @Accept       json
 // @Produce      json
 // @Param        account body BecomeAuthorRequest true "update author info"
-// @Param 		 Authorization header string true "Bearer {JWT token}"
 // @Success      200  {object}  SuccessMsg
 // @Failure      400  {object}  ErrorMsg
+// @Security Bearer
 // @Router       /invite_co_author [post]
 func (rs *RestSrv) HandleInviteCoAuthor(w http.ResponseWriter, r *http.Request) {
 	request := new(BecomeAuthorRequest)
@@ -82,16 +84,16 @@ func (rs *RestSrv) HandleInviteCoAuthor(w http.ResponseWriter, r *http.Request) 
 	responJSON(w, http.StatusOK, SuccessMsg{Msg: "OK"})
 }
 
-// AuthorInfo godoc
-// @Summary      TODO
-// @Description  TODO
+// HandleAuthorInfo AuthorInfo godoc
+// @Summary      Get author info
+// @Description  Get author info
 // @Tags         Authors
 // @Accept       json
 // @Produce      json
 // @Param        web3_address   path      string  true  "author web3 address"
 // @Success      200  {object}  storage.AuthorResponse
 // @Failure      400  {object}  ErrorMsg
-// @Router       /author_info [get]
+// @Router       /author_info/{web3_address} [get]
 func (rs *RestSrv) HandleAuthorInfo(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	authorAddress, ok := vars["web3_address"]
@@ -111,15 +113,16 @@ func (rs *RestSrv) HandleAuthorInfo(w http.ResponseWriter, r *http.Request) {
 	responJSON(w, http.StatusOK, authorResp)
 }
 
-// UpdataBasicPacticipant godoc
-// @Summary      TODO
-// @Description  TODO
+// HandleUpdateAuthor
+// @Summary      Update participant info
+// @Description  Update participant basic info
 // @Tags         Authors
 // @Accept       json
 // @Produce      json
 // @Param        account body UpdateAuthorRequest true "update author info"
 // @Success      200  {object}   AuthResp
 // @Failure      400  {object}  ErrorMsg
+// @Security Bearer
 // @Router       /update_author_info [post]
 func (rs *RestSrv) HandleUpdateAuthor(w http.ResponseWriter, r *http.Request) {
 	web3Address, err := rs.getWeb3Address(r)
@@ -161,15 +164,16 @@ func (rs *RestSrv) HandleUpdateAuthor(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleGetWorkReviews godoc
-// @Summary      TODO
-// @Description  TODO
+// @Summary      Get work reviews
+// @Description Get work reviews by work_id
 // @Tags         Work review
 // @Accept       json
 // @Produce      json
 // @Param        work_id   path      string  true  "work id"
 // @Success      200  {object}   []storage.WorkReview
 // @Failure      400  {object}  ErrorMsg
-// @Router       /work_reviews [get]
+// @Security Bearer
+// @Router       /work_reviews/{work_id} [get]
 func (rs *RestSrv) HandleGetWorkReviews(w http.ResponseWriter, r *http.Request) {
 	web3Address, err := rs.getWeb3Address(r)
 	if err != nil {

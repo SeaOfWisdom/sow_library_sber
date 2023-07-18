@@ -53,7 +53,7 @@ func (ss *StorageSrv) ApproveWork(workID string) error {
 func (ss *StorageSrv) RemoveWork(workID string) error {
 	participantsWork, err := ss.GetParticipantWorkByID(workID)
 	if err != nil {
-		ss.log.Error(fmt.Sprint("RemoveWork: error get participant by work id, err: %v", err))
+		ss.log.Error(fmt.Sprintf("RemoveWork: error get participant by work id, err: %v", err))
 
 		return err
 	}

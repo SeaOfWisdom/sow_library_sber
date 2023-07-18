@@ -91,7 +91,7 @@ func (rs *RestSrv) setRouters() map[string]storage.ParticipantRole {
 	rs.Get("/get_basic_info", rs.HandleGetBasicInfo)
 	rs.Get("/if_participant_exists/{web3_address}", rs.HandleIfParticipantExists)
 
-	rs.Post("/update_basic_info", rs.HandleUpdataBasicPacticipant)
+	rs.Post("/update_basic_info", rs.HandleUpdateBasicParticipant)
 
 	// rs.Post("/remove_participant/{nick_name}", rs.HandleAddPacticipant)
 
@@ -109,6 +109,7 @@ func (rs *RestSrv) setRouters() map[string]storage.ParticipantRole {
 	rs.Post("/update_validator_info", rs.HandleUpdateValidator)
 	// TODO
 	rs.Get("/validator_info/{web3_address}", rs.HandleValidatorInfo)
+	rs.Post("/validator_info/upload_docs", rs.HandleUploadValidatorDocs)
 
 	// Validator work review
 	rs.Get("/work_review/{work_id}", rs.HandleGetWorkReviewByWorkID)
@@ -137,6 +138,9 @@ func (rs *RestSrv) setRouters() map[string]storage.ParticipantRole {
 
 	rs.Get("/work_data", rs.HandlePublishWorkData)
 	rs.Post("/publish_work", rs.HandlePublishWork)
+
+	// faucet
+	rs.Get("/faucet/{web3_address}", rs.HandleFaucet)
 
 	// only admin role
 	rs.Get("/pending_works", rs.HandlePendingWorks)

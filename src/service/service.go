@@ -379,9 +379,9 @@ func (ls *LibrarySrv) PurchaseWork(readerAddress, workID string) (string, string
 }
 
 // PurchaseWork ...
-func (ls *LibrarySrv) PurchasedWorks(readerAddress string) ([]*storage.WorkResponse, error) {
+func (ls *LibrarySrv) PurchasedWorks(ctx context.Context, readerAddress string) ([]*storage.WorkResponse, error) {
 	// check for the existence of the participant
-	works, err := ls.storage.GetPurchasedWorks(readerAddress)
+	works, err := ls.storage.GetPurchasedWorks(ctx, readerAddress)
 	if err != nil {
 		ls.log.Errorf("PurchaseWork: error get pending works, err: %v", err)
 
@@ -429,14 +429,14 @@ func (ls *LibrarySrv) GetWorksByKeyWords(readerAddress string, keyWords []string
 
 func (ls *LibrarySrv) GetWorkByID(authorAddress, workID string) (*storage.WorkResponse, error) {
 	// check for the existence of the participant
-	works, err := ls.storage.GetWorkByID(workID)
+	work, err := ls.storage.GetWorkByID(workID)
 	if err != nil {
 		ls.log.Errorf("GetWorkByID: error get work by id %s, err: %v", workID, err)
 
 		return nil, err
 	}
 
-	return works, nil
+	return work, nil
 }
 
 func (ls *LibrarySrv) GetWorksByAuthorAddress(readerAddress, authorAddress string) ([]*storage.WorkResponse, error) {
@@ -677,7 +677,7 @@ func (ls *LibrarySrv) SubmitWorkReview(ctx context.Context, validatorAddress, wo
 
 	participantsReview.Status = status
 
-	if err = ls.storage.SubmitWorkReview(participantsReview); err != nil {
+	if err = ls.storage.SubmitWorkReview(ctx, participantsReview); err != nil {
 		ls.log.Errorf("SubmitWorkReview: error submit work review, err: %v", err)
 
 		return fmt.Errorf("while submitting the work review, err: %v", err)
@@ -704,6 +704,19 @@ func (ls *LibrarySrv) SubmitWorkReview(ctx context.Context, validatorAddress, wo
 	}
 
 	return nil
+}
+
+// Faucet ...
+func (ls *LibrarySrv) Faucet(account string) (string, error) {
+	purchaseWorkResp, err := ls.contractorSrv.Faucet(context.Background(), &contractor.FaucetRequest{
+		Address: account,
+		Amount:  "50000000000000000000", // 50 ETH
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return purchaseWorkResp.TxHash, nil
 }
 
 func buildWorkResponse(inputWork storage.WorkResponse) (work storage.WorkResponse) {

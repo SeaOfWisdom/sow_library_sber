@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -30,6 +31,10 @@ func (ss *StorageSrv) GetWorkByID(workID string) (response *WorkResponse, err er
 	// postgres work
 	participantsWork, err := ss.GetParticipantWorkByID(workID)
 	if err != nil {
+		if errors.Is(err, ErrWorkNotExists) {
+			err = nil
+		}
+
 		return
 	}
 
@@ -69,8 +74,9 @@ func (ss *StorageSrv) GetAllWorks(readerAddress string) (response []*WorkRespons
 	}
 
 	participantsWorks := ss.getAllParticipantsWorks()
-	if participantsWorks == nil {
-		return nil, fmt.Errorf("there are no works in the library:(")
+	response = make([]*WorkResponse, 0, len(participantsWorks))
+	if len(participantsWorks) == 0 {
+		return
 	}
 
 	filter := make(map[string]interface{})
@@ -163,7 +169,7 @@ func (ss *StorageSrv) GetWorkByKeyWords(readerAddress string, keyWords []string)
 }
 
 // GetPurchasedWorks ...
-func (ss *StorageSrv) GetPurchasedWorks(readerAddress string) (response []*WorkResponse, err error) {
+func (ss *StorageSrv) GetPurchasedWorks(ctx context.Context, readerAddress string) (response []*WorkResponse, err error) {
 	readerID := ss.getParticipantIDOrNil(readerAddress)
 	if readerID == "" {
 		return nil, fmt.Errorf("haven't got the reader: %s", readerAddress)
@@ -171,12 +177,12 @@ func (ss *StorageSrv) GetPurchasedWorks(readerAddress string) (response []*WorkR
 
 	workIDs := ss.GetPurchasedByParticipantID(readerID)
 	if len(workIDs) == 0 {
-		return nil, fmt.Errorf("there are no purposed works")
+		return []*WorkResponse{}, nil
 	}
 
 	filter := make(map[string]interface{})
 	filter["id"] = workIDs
-	mongoWorks, err := ss.getWorksByFilter(context.TODO(), filter)
+	mongoWorks, err := ss.getWorksByFilter(ctx, filter)
 	if err != nil {
 		return nil, err
 	}

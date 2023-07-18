@@ -59,7 +59,7 @@ func (ss *StorageSrv) UpdateOrCreateWorkReview(ctx context.Context, validatorID 
 		return nil, nil
 	}
 
-	currentReview, err := ss.GetWorkReviewByID(participantsReview.ID)
+	currentReview, err := ss.GetWorkReviewByID(ctx, participantsReview.ID)
 	if err != nil {
 		ss.log.Error(fmt.Sprintf("while getting the workReview by validator and author id, err: %s", err))
 		return nil, err
@@ -91,30 +91,35 @@ func (ss *StorageSrv) UpdateOrCreateWorkReview(ctx context.Context, validatorID 
 		currentReview.Body.Review = review.Body.Review
 	}
 
-	if err := ss.UpdateWorkReview(context.TODO(), currentReview); err != nil {
+	currentReview.Status = WorkReviewInProgress
+
+	if err := ss.UpdateWorkReview(ctx, currentReview); err != nil {
 		return nil, nil
 	}
+
 	return currentReview, nil
 }
 
 // SubmitWorkReview ...
-func (ss *StorageSrv) SubmitWorkReview(participantReview *ParticipantsWorkReview) error {
+func (ss *StorageSrv) SubmitWorkReview(ctx context.Context, participantReview *ParticipantsWorkReview) error {
 	if err := ss.UpdateParticipantsWorkReviewStatus(participantReview.ID, participantReview.Status); err != nil {
 		return err
 	}
 
-	currentReview, err := ss.GetWorkReviewByID(participantReview.ID)
+	currentReview, err := ss.GetWorkReviewByID(ctx, participantReview.ID)
 	if err != nil {
 		ss.log.Error(fmt.Sprintf("while getting the workReview by its id, err: %s", err))
 
 		return err
 	}
 
-	return ss.UpdateWorkReview(context.TODO(), currentReview)
+	currentReview.Status = participantReview.Status
+
+	return ss.UpdateWorkReview(ctx, currentReview)
 }
 
 // SubmitWorkReview ...
-func (ss *StorageSrv) GetWorkReviewByID(id string) (review *WorkReview, err error) {
+func (ss *StorageSrv) GetWorkReviewByID(ctx context.Context, id string) (review *WorkReview, err error) {
 	filter := bson.M{"id": id}
 	collection := ss.mongoDB.Collection(collectionWorkReviews)
 	if collection == nil {
@@ -122,7 +127,7 @@ func (ss *StorageSrv) GetWorkReviewByID(id string) (review *WorkReview, err erro
 	}
 
 	// make a request with the filter
-	cur, err := collection.Find(context.Background(), filter)
+	cur, err := collection.Find(ctx, filter)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, nil
@@ -178,7 +183,7 @@ func (ss *StorageSrv) GetReviewByValidatorAndWorkID(validatorID, workID string) 
 		return nil, nil
 	}
 
-	return ss.GetWorkReviewByID(participantReview.ID)
+	return ss.GetWorkReviewByID(context.TODO(), participantReview.ID)
 }
 
 func (ss *StorageSrv) GetReviewByAuthorAndWorkID(authorID, workID string) (reviews []*WorkReview, err error) {
@@ -191,7 +196,7 @@ func (ss *StorageSrv) GetReviewByAuthorAndWorkID(authorID, workID string) (revie
 	}
 
 	for _, participantReview := range participantReviews {
-		review, err := ss.GetWorkReviewByID(participantReview.ID)
+		review, err := ss.GetWorkReviewByID(context.TODO(), participantReview.ID)
 		if err != nil {
 			return nil, err
 		}

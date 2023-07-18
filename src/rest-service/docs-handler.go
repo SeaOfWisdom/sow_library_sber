@@ -10,16 +10,16 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// UploadDoc godoc
-// @Summary      TODO
-// @Description  TODO
+// HandlerUploadDoc UploadDoc godoc
+// @Summary      Upload doc of work
+// @Description  Uploading documents confirming work
 // @Tags         Docs
 // @Accept       json
 // @Produce      json
 // @Param        doc_type   path      string  true  "work id"
-// @Param 		 Authorization header string true "Bearer {JWT token}"
 // @Success      200  {object}  SuccessMsg
 // @Failure      400  {object}  ErrorMsg
+// @Security Bearer
 // @Router       /upload_doc [put]
 func (rs *RestSrv) HandlerUploadDoc(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)

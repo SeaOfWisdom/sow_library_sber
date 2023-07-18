@@ -1,3 +1,5 @@
+consumes:
+- application/json
 definitions:
   rest.AuthResp:
     properties:
@@ -301,6 +303,8 @@ definitions:
         type: string
       language:
         type: string
+      status:
+        type: string
       updated_date:
         type: string
       work_id:
@@ -323,12 +327,15 @@ definitions:
     type: object
 info:
   contact: {}
+  description: Specification of interaction with the application
+  title: SOW library API
+  version: "1.0"
 paths:
-  /add_bookmark:
+  /add_bookmark/{work_id}:
     get:
       consumes:
       - application/json
-      description: TODO
+      description: Add a new bookmark to work
       parameters:
       - description: work id to add into bookmarks
         in: path
@@ -352,10 +359,12 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/rest.ErrorMsg'
-      summary: TODO
+      security:
+      - Bearer: []
+      summary: Add a new bookmark
       tags:
       - Bookmarks
-  /auth:
+  /auth/{web3_address}:
     get:
       consumes:
       - application/json
@@ -384,7 +393,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: TODO
+      description: Get all available sciences
       produces:
       - application/json
       responses:
@@ -392,14 +401,14 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/rest.BecomeAuthorDataResp'
-      summary: TODO
+      summary: Get sciences
       tags:
       - Authors
-  /author_info:
+  /author_info/{web3_address}:
     get:
       consumes:
       - application/json
-      description: TODO
+      description: Get author info
       parameters:
       - description: author web3 address
         in: path
@@ -417,14 +426,14 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/rest.ErrorMsg'
-      summary: TODO
+      summary: Get author info
       tags:
       - Authors
   /become_author:
     post:
       consumes:
       - application/json
-      description: TODO
+      description: Become a author
       parameters:
       - description: update author info
         in: body
@@ -432,11 +441,6 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/rest.BecomeAuthorRequest'
-      - description: Bearer {JWT token}
-        in: header
-        name: Authorization
-        required: true
-        type: string
       produces:
       - application/json
       responses:
@@ -448,7 +452,9 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/rest.ErrorMsg'
-      summary: TODO
+      security:
+      - Bearer: []
+      summary: Become a author
       tags:
       - Authors
   /become_validator:
@@ -463,11 +469,6 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/rest.BecomeValidatorRequest'
-      - description: Bearer {JWT token}
-        in: header
-        name: Authorization
-        required: true
-        type: string
       produces:
       - application/json
       responses:
@@ -479,6 +480,8 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/rest.ErrorMsg'
+      security:
+      - Bearer: []
       summary: Become a validator
       tags:
       - Validators
@@ -486,13 +489,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: TODO
-      parameters:
-      - description: Bearer {JWT token}
-        in: header
-        name: Authorization
-        required: true
-        type: string
+      description: Get bookmarks
       produces:
       - application/json
       responses:
@@ -510,20 +507,41 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/rest.ErrorMsg'
-      summary: TODO
+      security:
+      - Bearer: []
+      summary: Get bookmarks
       tags:
       - Bookmarks
+  /faucet:
+    get:
+      consumes:
+      - application/json
+      description: Mints 50 SOW tokens to web3_address
+      parameters:
+      - description: participant web3 address
+        in: path
+        name: web3_address
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+      summary: Faucet SOW tokens
+      tags:
+      - Faucet
   /get_basic_info:
     post:
       consumes:
       - application/json
-      description: TODO
-      parameters:
-      - description: Bearer {JWT token}
-        in: header
-        name: Authorization
-        required: true
-        type: string
+      description: Get basic info
       produces:
       - application/json
       responses:
@@ -535,14 +553,16 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/rest.ErrorMsg'
-      summary: TODO
+      security:
+      - Bearer: []
+      summary: Get info
       tags:
       - Participants
-  /if_participant_exists:
+  /if_participant_exists/{web3_address}:
     get:
       consumes:
       - application/json
-      description: TODO
+      description: Check participant availability
       parameters:
       - description: participant web3 address
         in: path
@@ -560,14 +580,14 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/rest.ErrorMsg'
-      summary: TODO
+      summary: Check if participant exists
       tags:
       - Participants
   /invite_co_author:
     post:
       consumes:
       - application/json
-      description: TODO
+      description: Invite co-author
       parameters:
       - description: update author info
         in: body
@@ -575,11 +595,6 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/rest.BecomeAuthorRequest'
-      - description: Bearer {JWT token}
-        in: header
-        name: Authorization
-        required: true
-        type: string
       produces:
       - application/json
       responses:
@@ -591,7 +606,9 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/rest.ErrorMsg'
-      summary: TODO
+      security:
+      - Bearer: []
+      summary: Invite co-author
       tags:
       - Authors
   /new_participant:
@@ -652,23 +669,20 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/rest.ErrorMsg'
+      security:
+      - Bearer: []
       summary: Publish a new work
       tags:
       - Publish work
-  /purchase_work:
+  /purchase_work/{work_id}:
     post:
       consumes:
       - application/json
-      description: TODO
+      description: Purchase particular work
       parameters:
       - description: work id to purchase
         in: path
         name: work_id
-        required: true
-        type: string
-      - description: Bearer {JWT token}
-        in: header
-        name: Authorization
         required: true
         type: string
       produces:
@@ -686,20 +700,16 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/rest.ErrorMsg'
-      summary: TODO
+      security:
+      - Bearer: []
+      summary: Purchase work
       tags:
       - Purchasing works
   /purchased_works:
     get:
       consumes:
       - application/json
-      description: TODO
-      parameters:
-      - description: Bearer {JWT token}
-        in: header
-        name: Authorization
-        required: true
-        type: string
+      description: Get purchased works
       produces:
       - application/json
       responses:
@@ -717,14 +727,16 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/rest.ErrorMsg'
-      summary: TODO
+      security:
+      - Bearer: []
+      summary: Purchased works
       tags:
       - Purchasing works
   /remove_bookmark:
     post:
       consumes:
       - application/json
-      description: TODO
+      description: Remove bookmarks
       parameters:
       - description: author web3 address
         in: path
@@ -751,7 +763,9 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/rest.ErrorMsg'
-      summary: TODO
+      security:
+      - Bearer: []
+      summary: Remove bookmarks
       tags:
       - Bookmarks
   /submit_work_review:
@@ -787,6 +801,8 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/rest.ErrorMsg'
+      security:
+      - Bearer: []
       summary: Submit review
       tags:
       - Work review
@@ -794,7 +810,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: TODO
+      description: Update participant basic info
       parameters:
       - description: update author info
         in: body
@@ -813,14 +829,14 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/rest.ErrorMsg'
-      summary: TODO
+      summary: Update participant info
       tags:
       - Authors
   /update_basic_info:
     post:
       consumes:
       - application/json
-      description: TODO
+      description: Update basic participant info
       parameters:
       - description: update basic participant info
         in: body
@@ -828,11 +844,6 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/rest.BasicInfoUpdateRequest'
-      - description: Bearer {JWT token}
-        in: header
-        name: Authorization
-        required: true
-        type: string
       produces:
       - application/json
       responses:
@@ -844,7 +855,9 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/rest.ErrorMsg'
-      summary: TODO
+      security:
+      - Bearer: []
+      summary: Update participant info
       tags:
       - Participants
   /update_review:
@@ -870,6 +883,8 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/rest.ErrorMsg'
+      security:
+      - Bearer: []
       summary: Evaluate work
       tags:
       - Work review
@@ -885,11 +900,6 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/rest.UpdateValidatorRequest'
-      - description: Bearer {JWT token}
-        in: header
-        name: Authorization
-        required: true
-        type: string
       produces:
       - application/json
       responses:
@@ -901,6 +911,8 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/rest.ErrorMsg'
+      security:
+      - Bearer: []
       summary: Update validator
       tags:
       - Validators
@@ -908,16 +920,11 @@ paths:
     put:
       consumes:
       - application/json
-      description: TODO
+      description: Uploading documents confirming work
       parameters:
       - description: work id
         in: path
         name: doc_type
-        required: true
-        type: string
-      - description: Bearer {JWT token}
-        in: header
-        name: Authorization
         required: true
         type: string
       produces:
@@ -931,10 +938,12 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/rest.ErrorMsg'
-      summary: TODO
+      security:
+      - Bearer: []
+      summary: Upload doc of work
       tags:
       - Docs
-  /validator_info:
+  /validator_info/{web3_address}:
     get:
       consumes:
       - application/json
@@ -957,6 +966,27 @@ paths:
           schema:
             $ref: '#/definitions/rest.ErrorMsg'
       summary: Validator info
+      tags:
+      - Validators
+  /validator_info/upload_docs:
+    post:
+      consumes:
+      - application/json
+      description: Uploading documents confirming competencies of validator
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/rest.SuccessMsg'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+      security:
+      - Bearer: []
+      summary: Upload validator documents
       tags:
       - Validators
   /work_data:
@@ -996,14 +1026,16 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/rest.ErrorMsg'
+      security:
+      - Bearer: []
       summary: Work reviews
       tags:
       - Work review
-  /work_reviews:
+  /work_reviews/{work_id}:
     get:
       consumes:
       - application/json
-      description: TODO
+      description: Get work reviews by work_id
       parameters:
       - description: work id
         in: path
@@ -1023,14 +1055,35 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/rest.ErrorMsg'
-      summary: TODO
+      summary: Get work reviews
       tags:
       - Work review
   /works:
     get:
       consumes:
       - application/json
-      description: TODO
+      description: Get all works depends on role
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/storage.WorkResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+      summary: Get all works
+      tags:
+      - Works
+  /works/{work_id}:
+    get:
+      consumes:
+      - application/json
+      description: Get work by id
       parameters:
       - description: work id
         in: path
@@ -1050,14 +1103,20 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/rest.ErrorMsg'
-      summary: TODO
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/rest.ErrorMsg'
+      security:
+      - Bearer: []
+      summary: Work by id
       tags:
       - Works
-  /works/author:
+  /works/author/{web3_address}:
     get:
       consumes:
       - application/json
-      description: TODO
+      description: Get list author`s works
       parameters:
       - description: author web3 address
         in: path
@@ -1077,14 +1136,16 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/rest.ErrorMsg'
-      summary: TODO
+      security:
+      - Bearer: []
+      summary: List author`s works
       tags:
       - Works
   /works_by_key_words:
     get:
       consumes:
       - application/json
-      description: TODO
+      description: Search works by particular words
       parameters:
       - description: words to search for
         in: path
@@ -1104,7 +1165,19 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/rest.ErrorMsg'
-      summary: TODO
+      security:
+      - Bearer: []
+      summary: Get all works by words
       tags:
       - Works
+produces:
+- application/json
+schemes:
+- http
+securityDefinitions:
+  Bearer:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

@@ -6,6 +6,12 @@ import "github.com/swaggo/swag"
 
 const docTemplate = `{
     "schemes": {{ marshal .Schemes }},
+    "consumes": [
+        "application/json"
+    ],
+    "produces": [
+        "application/json"
+    ],
     "swagger": "2.0",
     "info": {
         "description": "{{escape .Description}}",
@@ -16,9 +22,14 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/add_bookmark": {
+        "/add_bookmark/{work_id}": {
             "get": {
-                "description": "TODO",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Add a new bookmark to work",
                 "consumes": [
                     "application/json"
                 ],
@@ -28,7 +39,7 @@ const docTemplate = `{
                 "tags": [
                     "Bookmarks"
                 ],
-                "summary": "TODO",
+                "summary": "Add a new bookmark",
                 "parameters": [
                     {
                         "type": "string",
@@ -63,7 +74,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth": {
+        "/auth/{web3_address}": {
             "get": {
                 "description": "Auth account and return JWT token",
                 "consumes": [
@@ -103,7 +114,7 @@ const docTemplate = `{
         },
         "/author_data": {
             "get": {
-                "description": "TODO",
+                "description": "Get all available sciences",
                 "consumes": [
                     "application/json"
                 ],
@@ -113,7 +124,7 @@ const docTemplate = `{
                 "tags": [
                     "Authors"
                 ],
-                "summary": "TODO",
+                "summary": "Get sciences",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -124,9 +135,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/author_info": {
+        "/author_info/{web3_address}": {
             "get": {
-                "description": "TODO",
+                "description": "Get author info",
                 "consumes": [
                     "application/json"
                 ],
@@ -136,7 +147,7 @@ const docTemplate = `{
                 "tags": [
                     "Authors"
                 ],
-                "summary": "TODO",
+                "summary": "Get author info",
                 "parameters": [
                     {
                         "type": "string",
@@ -164,7 +175,12 @@ const docTemplate = `{
         },
         "/become_author": {
             "post": {
-                "description": "TODO",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Become a author",
                 "consumes": [
                     "application/json"
                 ],
@@ -174,7 +190,7 @@ const docTemplate = `{
                 "tags": [
                     "Authors"
                 ],
-                "summary": "TODO",
+                "summary": "Become a author",
                 "parameters": [
                     {
                         "description": "update author info",
@@ -184,13 +200,6 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/rest.BecomeAuthorRequest"
                         }
-                    },
-                    {
-                        "type": "string",
-                        "description": "Bearer {JWT token}",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
                     }
                 ],
                 "responses": {
@@ -211,6 +220,11 @@ const docTemplate = `{
         },
         "/become_validator": {
             "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
                 "description": "Become a validator",
                 "consumes": [
                     "application/json"
@@ -231,13 +245,6 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/rest.BecomeValidatorRequest"
                         }
-                    },
-                    {
-                        "type": "string",
-                        "description": "Bearer {JWT token}",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
                     }
                 ],
                 "responses": {
@@ -258,7 +265,12 @@ const docTemplate = `{
         },
         "/bookmarks": {
             "get": {
-                "description": "TODO",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Get bookmarks",
                 "consumes": [
                     "application/json"
                 ],
@@ -268,16 +280,7 @@ const docTemplate = `{
                 "tags": [
                     "Bookmarks"
                 ],
-                "summary": "TODO",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer {JWT token}",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
+                "summary": "Get bookmarks",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -303,9 +306,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/faucet": {
+            "get": {
+                "description": "Mints 50 SOW tokens to web3_address",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Faucet"
+                ],
+                "summary": "Faucet SOW tokens",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "participant web3 address",
+                        "name": "web3_address",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/rest.ErrorMsg"
+                        }
+                    }
+                }
+            }
+        },
         "/get_basic_info": {
             "post": {
-                "description": "TODO",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Get basic info",
                 "consumes": [
                     "application/json"
                 ],
@@ -315,16 +361,7 @@ const docTemplate = `{
                 "tags": [
                     "Participants"
                 ],
-                "summary": "TODO",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer {JWT token}",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
+                "summary": "Get info",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -341,9 +378,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/if_participant_exists": {
+        "/if_participant_exists/{web3_address}": {
             "get": {
-                "description": "TODO",
+                "description": "Check participant availability",
                 "consumes": [
                     "application/json"
                 ],
@@ -353,7 +390,7 @@ const docTemplate = `{
                 "tags": [
                     "Participants"
                 ],
-                "summary": "TODO",
+                "summary": "Check if participant exists",
                 "parameters": [
                     {
                         "type": "string",
@@ -381,7 +418,12 @@ const docTemplate = `{
         },
         "/invite_co_author": {
             "post": {
-                "description": "TODO",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Invite co-author",
                 "consumes": [
                     "application/json"
                 ],
@@ -391,7 +433,7 @@ const docTemplate = `{
                 "tags": [
                     "Authors"
                 ],
-                "summary": "TODO",
+                "summary": "Invite co-author",
                 "parameters": [
                     {
                         "description": "update author info",
@@ -401,13 +443,6 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/rest.BecomeAuthorRequest"
                         }
-                    },
-                    {
-                        "type": "string",
-                        "description": "Bearer {JWT token}",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
                     }
                 ],
                 "responses": {
@@ -468,6 +503,11 @@ const docTemplate = `{
         },
         "/publish_work": {
             "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
                 "description": "Publish a new work",
                 "consumes": [
                     "application/json"
@@ -519,9 +559,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/purchase_work": {
+        "/purchase_work/{work_id}": {
             "post": {
-                "description": "TODO",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Purchase particular work",
                 "consumes": [
                     "application/json"
                 ],
@@ -531,20 +576,13 @@ const docTemplate = `{
                 "tags": [
                     "Purchasing works"
                 ],
-                "summary": "TODO",
+                "summary": "Purchase work",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "work id to purchase",
                         "name": "work_id",
                         "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Bearer {JWT token}",
-                        "name": "Authorization",
-                        "in": "header",
                         "required": true
                     }
                 ],
@@ -572,7 +610,12 @@ const docTemplate = `{
         },
         "/purchased_works": {
             "get": {
-                "description": "TODO",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Get purchased works",
                 "consumes": [
                     "application/json"
                 ],
@@ -582,16 +625,7 @@ const docTemplate = `{
                 "tags": [
                     "Purchasing works"
                 ],
-                "summary": "TODO",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer {JWT token}",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
+                "summary": "Purchased works",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -619,7 +653,12 @@ const docTemplate = `{
         },
         "/remove_bookmark": {
             "post": {
-                "description": "TODO",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Remove bookmarks",
                 "consumes": [
                     "application/json"
                 ],
@@ -629,7 +668,7 @@ const docTemplate = `{
                 "tags": [
                     "Bookmarks"
                 ],
-                "summary": "TODO",
+                "summary": "Remove bookmarks",
                 "parameters": [
                     {
                         "type": "string",
@@ -670,6 +709,11 @@ const docTemplate = `{
         },
         "/submit_work_review": {
             "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
                 "description": "Submit work review by validator",
                 "consumes": [
                     "application/json"
@@ -722,7 +766,7 @@ const docTemplate = `{
         },
         "/update_author_info": {
             "post": {
-                "description": "TODO",
+                "description": "Update participant basic info",
                 "consumes": [
                     "application/json"
                 ],
@@ -732,7 +776,7 @@ const docTemplate = `{
                 "tags": [
                     "Authors"
                 ],
-                "summary": "TODO",
+                "summary": "Update participant info",
                 "parameters": [
                     {
                         "description": "update author info",
@@ -762,7 +806,12 @@ const docTemplate = `{
         },
         "/update_basic_info": {
             "post": {
-                "description": "TODO",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Update basic participant info",
                 "consumes": [
                     "application/json"
                 ],
@@ -772,7 +821,7 @@ const docTemplate = `{
                 "tags": [
                     "Participants"
                 ],
-                "summary": "TODO",
+                "summary": "Update participant info",
                 "parameters": [
                     {
                         "description": "update basic participant info",
@@ -782,13 +831,6 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/rest.BasicInfoUpdateRequest"
                         }
-                    },
-                    {
-                        "type": "string",
-                        "description": "Bearer {JWT token}",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
                     }
                 ],
                 "responses": {
@@ -809,6 +851,11 @@ const docTemplate = `{
         },
         "/update_review": {
             "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
                 "description": "Evaluate work by validator",
                 "consumes": [
                     "application/json"
@@ -849,6 +896,11 @@ const docTemplate = `{
         },
         "/update_validator_info": {
             "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
                 "description": "Update validator info",
                 "consumes": [
                     "application/json"
@@ -869,13 +921,6 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/rest.UpdateValidatorRequest"
                         }
-                    },
-                    {
-                        "type": "string",
-                        "description": "Bearer {JWT token}",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
                     }
                 ],
                 "responses": {
@@ -896,7 +941,12 @@ const docTemplate = `{
         },
         "/upload_doc": {
             "put": {
-                "description": "TODO",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Uploading documents confirming work",
                 "consumes": [
                     "application/json"
                 ],
@@ -906,20 +956,13 @@ const docTemplate = `{
                 "tags": [
                     "Docs"
                 ],
-                "summary": "TODO",
+                "summary": "Upload doc of work",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "work id",
                         "name": "doc_type",
                         "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Bearer {JWT token}",
-                        "name": "Authorization",
-                        "in": "header",
                         "required": true
                     }
                 ],
@@ -939,7 +982,41 @@ const docTemplate = `{
                 }
             }
         },
-        "/validator_info": {
+        "/validator_info/upload_docs": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Uploading documents confirming competencies of validator",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Validators"
+                ],
+                "summary": "Upload validator documents",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/rest.SuccessMsg"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/rest.ErrorMsg"
+                        }
+                    }
+                }
+            }
+        },
+        "/validator_info/{web3_address}": {
             "get": {
                 "description": "Validator full info",
                 "consumes": [
@@ -1002,6 +1079,11 @@ const docTemplate = `{
         },
         "/work_review": {
             "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
                 "description": "Get all work reviews by work id",
                 "consumes": [
                     "application/json"
@@ -1038,9 +1120,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/work_reviews": {
+        "/work_reviews/{work_id}": {
             "get": {
-                "description": "TODO",
+                "description": "Get work reviews by work_id",
                 "consumes": [
                     "application/json"
                 ],
@@ -1050,7 +1132,7 @@ const docTemplate = `{
                 "tags": [
                     "Work review"
                 ],
-                "summary": "TODO",
+                "summary": "Get work reviews",
                 "parameters": [
                     {
                         "type": "string",
@@ -1081,7 +1163,7 @@ const docTemplate = `{
         },
         "/works": {
             "get": {
-                "description": "TODO",
+                "description": "Get all works depends on role",
                 "consumes": [
                     "application/json"
                 ],
@@ -1091,16 +1173,7 @@ const docTemplate = `{
                 "tags": [
                     "Works"
                 ],
-                "summary": "TODO",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "work id",
-                        "name": "work_id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
+                "summary": "Get all works",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1120,9 +1193,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/works/author": {
+        "/works/author/{web3_address}": {
             "get": {
-                "description": "TODO",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Get list author` + "`" + `s works",
                 "consumes": [
                     "application/json"
                 ],
@@ -1132,7 +1210,7 @@ const docTemplate = `{
                 "tags": [
                     "Works"
                 ],
-                "summary": "TODO",
+                "summary": "List author` + "`" + `s works",
                 "parameters": [
                     {
                         "type": "string",
@@ -1161,9 +1239,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/works_by_key_words": {
+        "/works/{work_id}": {
             "get": {
-                "description": "TODO",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Get work by id",
                 "consumes": [
                     "application/json"
                 ],
@@ -1173,7 +1256,59 @@ const docTemplate = `{
                 "tags": [
                     "Works"
                 ],
-                "summary": "TODO",
+                "summary": "Work by id",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "work id",
+                        "name": "work_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/storage.WorkResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/rest.ErrorMsg"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/rest.ErrorMsg"
+                        }
+                    }
+                }
+            }
+        },
+        "/works_by_key_words": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Search works by particular words",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Works"
+                ],
+                "summary": "Get all works by words",
                 "parameters": [
                     {
                         "type": "string",
@@ -1661,6 +1796,9 @@ const docTemplate = `{
                 "language": {
                     "type": "string"
                 },
+                "status": {
+                    "type": "string"
+                },
                 "updated_date": {
                     "type": "string"
                 },
@@ -1692,17 +1830,25 @@ const docTemplate = `{
                 }
             }
         }
+    },
+    "securityDefinitions": {
+        "Bearer": {
+            "description": "Type \"Bearer\" followed by a space and JWT token.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
     }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "",
+	Version:          "1.0",
 	Host:             "",
 	BasePath:         "",
-	Schemes:          []string{},
-	Title:            "",
-	Description:      "",
+	Schemes:          []string{"http"},
+	Title:            "SOW library API",
+	Description:      "Specification of interaction with the application",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

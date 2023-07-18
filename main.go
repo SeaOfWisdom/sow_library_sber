@@ -9,6 +9,18 @@ import (
 	srv "github.com/SeaOfWisdom/sow_library/src/service"
 )
 
+// @title           SOW library API
+// @version         1.0
+// @description		Specification of interaction with the application
+
+// @securityDefinitions.apikey Bearer
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
+
+// @accept json
+// @produce json
+// @schemes http
 func main() {
 	di := container.CreateContainer()
 	container.MustInvoke(di, func(
