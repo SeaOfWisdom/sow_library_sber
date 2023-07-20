@@ -3,19 +3,21 @@ package storage
 import (
 	"context"
 	"fmt"
-
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.uber.org/zap"
+	"github.com/SeaOfWisdom/sow_library/src/log"
+	"time"
 
 	"github.com/SeaOfWisdom/sow_library/src/config"
 
+	"go.mongodb.org/mongo-driver/mongo"
 	"gorm.io/gorm"
 )
+
+const defaultWei = "50000000000000000000"
 
 // StorageSrv ...
 type StorageSrv struct {
 	/* log */
-	log *zap.Logger
+	log *log.Logger
 	/* PostgreSQL */
 	psqlDB *gorm.DB
 	/* MongoDB */
@@ -26,7 +28,10 @@ type StorageSrv struct {
 }
 
 // NewStorageSrv ...
-func NewStorageSrv(cfg *config.Config, postresDB *gorm.DB, mongoDB *mongo.Database) *StorageSrv {
+func NewStorageSrv(cfg *config.Config, log *log.Logger, postresDB *gorm.DB, mongoDB *mongo.Database) *StorageSrv {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+
 	// verify the existing of all collections
 	collection := mongoDB.Collection(collectionWorks)
 	if collection == nil {
@@ -50,7 +55,7 @@ func NewStorageSrv(cfg *config.Config, postresDB *gorm.DB, mongoDB *mongo.Databa
 	}
 
 	ss := &StorageSrv{
-		log:     zap.NewExample(),
+		log:     log,
 		psqlDB:  postresDB,
 		mongoDB: mongoDB,
 	}
@@ -58,15 +63,19 @@ func NewStorageSrv(cfg *config.Config, postresDB *gorm.DB, mongoDB *mongo.Databa
 	if err := ss.psqlDB.AutoMigrate(Participant{}); err != nil {
 		panic(err)
 	}
+
 	if err := ss.psqlDB.AutoMigrate(ParticipantsWork{}); err != nil {
 		panic(err)
 	}
+
 	if err := ss.psqlDB.AutoMigrate(ParticipantsPurpose{}); err != nil {
 		panic(err)
 	}
+
 	if err := ss.psqlDB.AutoMigrate(ParticipantsBookmark{}); err != nil {
 		panic(err)
 	}
+
 	if err := ss.psqlDB.AutoMigrate(ParticipantsWorkReview{}); err != nil {
 		panic(err)
 	}
@@ -76,6 +85,11 @@ func NewStorageSrv(cfg *config.Config, postresDB *gorm.DB, mongoDB *mongo.Databa
 			panic(err)
 		}
 	}
+
+	if err := ss.upsertWorksWithoutStatus(ctx); err != nil {
+		panic(err)
+	}
+
 	return ss
 }
 
@@ -106,7 +120,7 @@ func (ss *StorageSrv) buildWorkResponse(
 	if author != nil {
 		work.AuthorID = author.ID
 	}
-	work.Price = "50000000000000000000" // wei
+	work.Price = defaultWei // wei
 	workResp = new(WorkResponse)
 	workResp.Work = work
 	workResp.Author = &AuthorResponse{

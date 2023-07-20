@@ -1,12 +1,12 @@
 package rest
 
 import (
-	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	ocr "github.com/SeaOfWisdom/sow_proto/ocr-srv"
+
 	"github.com/gorilla/mux"
 )
 
@@ -26,6 +26,7 @@ func (rs *RestSrv) HandlerUploadDoc(w http.ResponseWriter, r *http.Request) {
 	docType, ok := vars["doc_type"]
 	if !ok {
 		responError(w, http.StatusBadRequest, "null request param")
+
 		return
 	}
 	rs.logger.Info(fmt.Sprintf("doc type: %s", docType))
@@ -35,37 +36,39 @@ func (rs *RestSrv) HandlerUploadDoc(w http.ResponseWriter, r *http.Request) {
 
 	file, handler, err := r.FormFile("doc")
 	if err != nil {
-		fmt.Println("Error Retrieving the File")
 		responError(w, http.StatusBadRequest, err.Error())
+
 		return
 	}
 	defer file.Close()
-	fmt.Printf("Uploaded File: %+v\n", handler.Filename)
-	fmt.Printf("File Size: %+v\n", handler.Size)
-	fmt.Printf("MIME Header: %+v\n", handler.Header)
+	rs.logger.Infof("HandlerUploadDoc: uploaded File: %+v\n", handler.Filename)
+	rs.logger.Infof("HandlerUploadDoc: file Size: %+v\n", handler.Size)
+	rs.logger.Infof("HandlerUploadDoc: MIME Header: %+v\n", handler.Header)
 
 	// read all of the contents of our uploaded file into a
 	// byte array
 
 	/// !!!! TODO !!!!
-	imageBytes, err := ioutil.ReadAll(file)
+	imageBytes, err := io.ReadAll(file)
 	if err != nil {
-		fmt.Println(err)
+		rs.logger.Errorf("HandlerUploadDoc: %v", err)
 		responJSON(w, http.StatusOK, SuccessMsg{Msg: "OK"})
+
 		return
 	}
 
-	imageResp, err := rs.ocrSrv.ExtractText(context.Background(), &ocr.ExtractTextRequest{
+	imageResp, err := rs.ocrSrv.ExtractText(r.Context(), &ocr.ExtractTextRequest{
 		Image: imageBytes,
 	})
 	if err != nil {
-		rs.logger.Error(fmt.Sprintf("while extract text via ocr service, err: %v", err))
+		rs.logger.Errorf("HandlerUploadDoc: while extract text via ocr service, err: %v", err)
 		responJSON(w, http.StatusOK, SuccessMsg{Msg: "OK"})
+
 		return
 	}
 
-	fmt.Println("Abstract: ", imageResp.Abstract)
-	fmt.Println("Main: ", imageResp.Main)
+	rs.logger.Errorf("HandlerUploadDoc: abstract: %v", imageResp.Abstract)
+	rs.logger.Errorf("HandlerUploadDoc: main: %s", imageResp.Main)
 
 	// TODO
 	if docType == "paper" {

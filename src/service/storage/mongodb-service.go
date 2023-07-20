@@ -30,9 +30,9 @@ func addIndexOnWorks(works *mongo.Collection) {
 }
 
 // ApproveWork ...
-func (ss *StorageSrv) ApproveWork(workID string) error {
+func (ss *StorageSrv) ApproveWork(ctx context.Context, workID string) error {
 	// get work by id
-	works, err := ss.getWorksByFilter(context.TODO(), map[string]interface{}{"work_id": workID})
+	works, err := ss.getWorksByFilter(ctx, map[string]interface{}{"work_id": workID})
 	if err != nil {
 		return err
 	}
@@ -50,10 +50,10 @@ func (ss *StorageSrv) ApproveWork(workID string) error {
 }
 
 // RemoveWork ...
-func (ss *StorageSrv) RemoveWork(workID string) error {
+func (ss *StorageSrv) RemoveWork(ctx context.Context, workID string) error {
 	participantsWork, err := ss.GetParticipantWorkByID(workID)
 	if err != nil {
-		ss.log.Error(fmt.Sprintf("RemoveWork: error get participant by work id, err: %v", err))
+		ss.log.Errorf("RemoveWork: error get participant by work id, err: %v", err)
 
 		return err
 	}
@@ -66,31 +66,36 @@ func (ss *StorageSrv) RemoveWork(workID string) error {
 	}
 
 	if len(mongoWork) > 1 {
-		ss.log.Error(fmt.Sprintf("the length of response(%d) is more than 1 work", len(mongoWork)))
+		ss.log.Errorf("the length of response(%d) is more than 1 work", len(mongoWork))
+
 		return fmt.Errorf("something went wrong")
 	}
 
 	// remove from MongoDB
-	if err := ss.removeWorkByID(workID); err != nil {
-		ss.log.Error(fmt.Sprintf("while removing the work from MongoDB, err: %v", err))
+	if err := ss.removeWorkByID(ctx, workID); err != nil {
+		ss.log.Errorf("while removing the work from MongoDB, err: %v", err)
+
 		return fmt.Errorf("something went wrong")
 	}
 
 	// remove from PostgreSQL
 	if err := ss.removeParticipantsWorkByID(workID); err != nil {
-		ss.log.Error(fmt.Sprintf("while removing the work from PostgreSQL(participantsWorks), err: %v", err))
+		ss.log.Errorf("while removing the work from PostgreSQL(participantsWorks), err: %v", err)
+
 		return fmt.Errorf("something went wrong")
 	}
 
 	// remove from Bookmarks
 	if err := ss.removeWorkFromBookmarks(workID); err != nil {
-		ss.log.Error(fmt.Sprintf("while removing the work from PostgreSQL(bookmarks), err: %v", err))
+		ss.log.Error("while removing the work from PostgreSQL(bookmarks), err: %v", err)
+
 		return fmt.Errorf("something went wrong")
 	}
 
 	// remove from Purposes
 	if err := ss.removeWorkFromPurposes(workID); err != nil {
-		ss.log.Error(fmt.Sprintf("while removing the work from PostgreSQL(purposes), err: %v", err))
+		ss.log.Errorf("while removing the work from PostgreSQL(purposes), err: %v", err)
+
 		return fmt.Errorf("something went wrong")
 	}
 

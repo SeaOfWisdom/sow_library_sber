@@ -766,6 +766,11 @@ const docTemplate = `{
         },
         "/update_author_info": {
             "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
                 "description": "Update participant basic info",
                 "consumes": [
                     "application/json"
@@ -1056,7 +1061,7 @@ const docTemplate = `{
         },
         "/work_data": {
             "get": {
-                "description": "TODO",
+                "description": "Mock work data",
                 "consumes": [
                     "application/json"
                 ],
@@ -1066,7 +1071,7 @@ const docTemplate = `{
                 "tags": [
                     "Publish work"
                 ],
-                "summary": "TODO",
+                "summary": "Mock work data",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1077,7 +1082,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/work_review": {
+        "/work_review/{work_id}": {
             "get": {
                 "security": [
                     {
@@ -1122,6 +1127,11 @@ const docTemplate = `{
         },
         "/work_reviews/{work_id}": {
             "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
                 "description": "Get work reviews by work_id",
                 "consumes": [
                     "application/json"
@@ -1744,6 +1754,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "sources": {
+                    "type": "string"
+                },
+                "status": {
                     "type": "string"
                 },
                 "tags": {

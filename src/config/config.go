@@ -5,7 +5,7 @@ import (
 )
 
 var AdminAddresses = map[string]string{
-	"chillhacker": "0xdd868980ef73edcbc1ff758f6e53023be18e2a52",
+	"chillhacker": "0xdD868980eF73eDCbC1fF758F6e53023bE18e2A52",
 	"esaurov":     "0xb41649C7f675D77dbEf7D1018653f5f4eA9EeEE7",
 }
 

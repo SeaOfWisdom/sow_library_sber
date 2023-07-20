@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/SeaOfWisdom/sow_library/src/service/storage"
+
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -18,12 +19,15 @@ func (r *NewParticipantRequest) Validate() error {
 	if r.NickName == "" {
 		return fmt.Errorf("null nickname: %s", r.NickName)
 	}
+
 	if r.Web3Address == "" {
 		return fmt.Errorf("null web3 address: %s", r.Web3Address)
 	}
+
 	if !common.IsHexAddress(r.Web3Address) {
 		return fmt.Errorf("wrong web3 address: %s", r.Web3Address)
 	}
+
 	return nil
 }
 

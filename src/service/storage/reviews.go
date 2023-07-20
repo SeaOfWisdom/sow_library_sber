@@ -108,7 +108,7 @@ func (ss *StorageSrv) SubmitWorkReview(ctx context.Context, participantReview *P
 
 	currentReview, err := ss.GetWorkReviewByID(ctx, participantReview.ID)
 	if err != nil {
-		ss.log.Error(fmt.Sprintf("while getting the workReview by its id, err: %s", err))
+		ss.log.Errorf("while getting the workReview by its id, err: %s", err)
 
 		return err
 	}
@@ -132,17 +132,20 @@ func (ss *StorageSrv) GetWorkReviewByID(ctx context.Context, id string) (review 
 		if err == mongo.ErrNoDocuments {
 			return nil, nil
 		}
-		ss.log.Error(fmt.Sprintf("while finding authors, err: %v", err))
-		return nil, err
+
+		ss.log.Errorf("while finding authors, err: %v", err)
+
+		return
 	}
 
 	for cur.Next(context.Background()) {
 		if err := cur.Decode(&review); err != nil {
-			ss.log.Error(fmt.Sprintf("Error decoding document, err: %v", err))
-			return nil, err
+			ss.log.Errorf("Error decoding document, err: %v", err)
 		}
-		return review, nil
+
+		return
 	}
+
 	return
 }
 
@@ -160,33 +163,36 @@ func (ss *StorageSrv) GetWorkReviewByWorkId(workID string) (review *WorkReview, 
 		if err == mongo.ErrNoDocuments {
 			return nil, nil
 		}
-		ss.log.Error(fmt.Sprintf("while finding authors, err: %v", err))
+		ss.log.Errorf("while finding authors, err: %v", err)
+
 		return nil, err
 	}
 
 	for cur.Next(context.Background()) {
 		if err := cur.Decode(&review); err != nil {
-			ss.log.Error(fmt.Sprintf("Error decoding document, err: %v", err))
-			return nil, err
+			ss.log.Errorf("Error decoding document, err: %v", err)
 		}
-		return review, nil
+
+		return
 	}
+
 	return
 }
 
-func (ss *StorageSrv) GetReviewByValidatorAndWorkID(validatorID, workID string) (review *WorkReview, err error) {
+func (ss *StorageSrv) GetReviewByValidatorAndWorkID(ctx context.Context, validatorID, workID string) (review *WorkReview, err error) {
 	participantReview, err := ss.FindParticipantsWorkReviewByValidator(validatorID, workID)
 	if err != nil {
 		return nil, err
 	}
+
 	if participantReview == nil {
 		return nil, nil
 	}
 
-	return ss.GetWorkReviewByID(context.TODO(), participantReview.ID)
+	return ss.GetWorkReviewByID(ctx, participantReview.ID)
 }
 
-func (ss *StorageSrv) GetReviewByAuthorAndWorkID(authorID, workID string) (reviews []*WorkReview, err error) {
+func (ss *StorageSrv) GetReviewByAuthorAndWorkID(ctx context.Context, authorID, workID string) (reviews []*WorkReview, err error) {
 	participantReviews, err := ss.FindParticipantsWorkReviews(workID)
 	if err != nil {
 		return nil, err
@@ -196,12 +202,14 @@ func (ss *StorageSrv) GetReviewByAuthorAndWorkID(authorID, workID string) (revie
 	}
 
 	for _, participantReview := range participantReviews {
-		review, err := ss.GetWorkReviewByID(context.TODO(), participantReview.ID)
+		review, err := ss.GetWorkReviewByID(ctx, participantReview.ID)
 		if err != nil {
 			return nil, err
 		}
+
 		reviews = append(reviews, review)
 	}
+
 	return
 }
 

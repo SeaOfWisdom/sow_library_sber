@@ -22,12 +22,15 @@ func (r *BecomeAuthorRequest) Validate() error {
 	if r.EmailAddress == "" {
 		return fmt.Errorf("wrong email address: %s", r.EmailAddress)
 	}
+
 	if r.Name == "" {
 		return fmt.Errorf("wrong name: %s", r.Name)
 	}
+
 	if r.Surname == "" {
 		return fmt.Errorf("wrong surname: %s", r.Surname)
 	}
+
 	return nil
 }
 

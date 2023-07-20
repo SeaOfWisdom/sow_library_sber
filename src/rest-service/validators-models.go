@@ -2,6 +2,7 @@ package rest
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/SeaOfWisdom/sow_library/src/service/storage"
 )
@@ -72,3 +73,22 @@ func (r *WorkReviewRequest) Validate() error {
 	}
 	return nil
 }
+
+type (
+	ValidatorDocReview struct {
+		*ValidatorForwardDoc
+		*ValidatorBackwardDoc
+	}
+
+	ValidatorForwardDoc struct {
+		Number  uint64    `json:"number"`
+		Date    time.Time `json:"date"`
+		Science string    `json:"science"`
+	}
+
+	ValidatorBackwardDoc struct {
+		DiplomaNumber       string    `json:"diploma_number"`
+		DiplomaSerialNumber string    `json:"diploma_serial_number"`
+		Date                time.Time `json:"diploma_date"`
+	}
+)

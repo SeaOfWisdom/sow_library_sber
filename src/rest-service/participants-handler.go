@@ -22,13 +22,16 @@ func (rs *RestSrv) HandleFaucet(w http.ResponseWriter, r *http.Request) {
 	web3AddrStr, ok := vars["web3_address"]
 	if !ok {
 		responError(w, http.StatusBadRequest, "null request param")
+
 		return
 	}
-	rs.logger.Info(fmt.Sprintf("request address: %s", web3AddrStr))
+
+	rs.logger.Infof("HandleFaucet: request address: %s", web3AddrStr)
 
 	txHash, err := rs.libSrv.Faucet(web3AddrStr)
 	if err != nil {
-		responError(w, http.StatusBadGateway, err.Error())
+		responError(w, http.StatusInternalServerError, err.Error())
+
 		return
 	}
 
@@ -46,25 +49,31 @@ func (rs *RestSrv) HandleFaucet(w http.ResponseWriter, r *http.Request) {
 // @Failure      400  {object}  ErrorMsg
 // @Router       /auth/{web3_address} [get]
 func (rs *RestSrv) HandleAuth(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
 	vars := mux.Vars(r)
 	web3AddrStr, ok := vars["web3_address"]
 	if !ok {
 		responError(w, http.StatusBadRequest, "null request param")
+
 		return
 	}
-	rs.logger.Info(fmt.Sprintf("request address: %s", web3AddrStr))
+
+	rs.logger.Info("HandleAuth: request address: %s", web3AddrStr)
 
 	// try to find a participant by the web3 address
 	participant, err := rs.libSrv.GetParticipantByWeb3Address(web3AddrStr)
 	if err != nil {
-		responError(w, http.StatusBadRequest, err.Error())
+		responError(w, http.StatusInternalServerError, err.Error())
+
 		return
 	}
 
 	// generate a new jwt token for him
-	jwt, err := rs.getJWTToken(participant.ID, participant.Web3Address, participant.Language, int64(participant.Role))
+	jwt, err := rs.getJWTToken(ctx, participant.ID, participant.Web3Address, participant.Language, int64(participant.Role))
 	if err != nil {
-		responError(w, http.StatusBadGateway, "something went wrong, our apologies")
+		responError(w, http.StatusInternalServerError, "something went wrong, our apologies")
+
 		return
 	}
 
@@ -82,22 +91,27 @@ func (rs *RestSrv) HandleAuth(w http.ResponseWriter, r *http.Request) {
 // @Failure      400  {object}  ErrorMsg
 // @Router       /new_participant [post]
 func (rs *RestSrv) HandleNewParticipant(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
 	request := new(NewParticipantRequest)
 	if err := rs.getRequest(r.Body, request); err != nil {
 		responError(w, http.StatusBadRequest, err.Error())
+
 		return
 	}
 
-	participant, err := rs.libSrv.CreateParticipant(request.NickName, request.Web3Address)
+	participant, err := rs.libSrv.CreateParticipant(ctx, request.NickName, request.Web3Address)
 	if err != nil {
-		responError(w, http.StatusBadRequest, err.Error())
+		responError(w, http.StatusInternalServerError, err.Error())
+
 		return
 	}
 
 	// generate a new jwt token for him
-	jwt, err := rs.getJWTToken(participant.ID, participant.Web3Address, participant.Language, int64(participant.Role))
+	jwt, err := rs.getJWTToken(ctx, participant.ID, participant.Web3Address, participant.Language, int64(participant.Role))
 	if err != nil {
-		responError(w, http.StatusBadGateway, "something went wrong, our apologies")
+		responError(w, http.StatusInternalServerError, "something went wrong, our apologies")
+
 		return
 	}
 
@@ -119,6 +133,7 @@ func (rs *RestSrv) HandleIfParticipantExists(w http.ResponseWriter, r *http.Requ
 	web3AddrStr, ok := vars["web3_address"]
 	if !ok {
 		responError(w, http.StatusBadRequest, "null request param")
+
 		return
 	}
 	rs.logger.Info(fmt.Sprintf("request address: %s", web3AddrStr))
@@ -126,6 +141,7 @@ func (rs *RestSrv) HandleIfParticipantExists(w http.ResponseWriter, r *http.Requ
 	// try to find a participant by the web3 address
 	if _, err := rs.libSrv.GetParticipantByWeb3Address(web3AddrStr); err != nil {
 		responJSON(w, http.StatusOK, IfParticipantExistsResp{Result: false})
+
 		return
 	}
 
@@ -146,26 +162,30 @@ func (rs *RestSrv) HandleIfParticipantExists(w http.ResponseWriter, r *http.Requ
 func (rs *RestSrv) HandleUpdateBasicParticipant(w http.ResponseWriter, r *http.Request) {
 	web3Address, err := rs.getWeb3Address(r)
 	if err != nil {
-		responError(w, http.StatusBadGateway, err.Error())
+		responError(w, http.StatusUnauthorized, err.Error())
+
 		return
 	}
 
 	request := new(BasicInfoUpdateRequest)
 	if err := rs.getRequest(r.Body, request); err != nil {
 		responError(w, http.StatusBadRequest, err.Error())
+
 		return
 	}
 
 	participant, err := rs.libSrv.UpdateParticipantNickName(web3Address, request.NickName)
 	if err != nil {
-		responError(w, http.StatusBadRequest, err.Error())
+		responError(w, http.StatusInternalServerError, err.Error())
+
 		return
 	}
 
 	// generate a new jwt token for him
-	jwt, err := rs.getJWTToken(participant.ID, web3Address, participant.Language, int64(participant.Role))
+	jwt, err := rs.getJWTToken(r.Context(), participant.ID, web3Address, participant.Language, int64(participant.Role))
 	if err != nil {
-		responError(w, http.StatusBadGateway, "something went wrong, our apologies")
+		responError(w, http.StatusInternalServerError, "something went wrong, our apologies")
+
 		return
 	}
 
@@ -186,13 +206,15 @@ func (rs *RestSrv) HandleGetBasicInfo(w http.ResponseWriter, r *http.Request) {
 	web3Address, err := rs.getWeb3Address(r)
 	if err != nil {
 		responError(w, http.StatusUnauthorized, fmt.Sprintf("while getting the decoding the jwt token, err: %v", err))
+
 		return
 	}
 
 	// get nickname
 	participant, err := rs.libSrv.GetParticipantByWeb3Address(web3Address)
 	if err != nil {
-		responError(w, http.StatusBadRequest, err.Error())
+		responError(w, http.StatusInternalServerError, err.Error())
+
 		return
 	}
 

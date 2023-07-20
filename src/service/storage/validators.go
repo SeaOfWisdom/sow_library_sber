@@ -9,21 +9,21 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func (ss *StorageSrv) CreateValidator(postgesqlID, emailAddress, name, surname string) error {
+func (ss *StorageSrv) CreateValidator(ctx context.Context, validatorID, emailAddress, name, surname string) error {
 	collection := ss.mongoDB.Collection(collectionValidators)
 	if collection == nil {
 		panic(fmt.Errorf("validators collection is nil"))
 	}
 
 	validator := Validator{
-		ID:           postgesqlID,
+		ID:           validatorID,
 		Name:         name,
 		Surname:      surname,
 		EmailAddress: emailAddress,
 		CreatedAt:    time.Now().UTC(),
 	}
 
-	if _, err := collection.InsertOne(context.Background(), validator); err != nil {
+	if _, err := collection.InsertOne(ctx, validator); err != nil {
 		return err
 	}
 
@@ -31,7 +31,7 @@ func (ss *StorageSrv) CreateValidator(postgesqlID, emailAddress, name, surname s
 }
 
 // TODO rewrite without for loop
-func (ss *StorageSrv) GetValidatorById(id string) (validator *Validator, err error) {
+func (ss *StorageSrv) GetValidatorById(ctx context.Context, id string) (validator *Validator, err error) {
 	filter := bson.M{"id": id}
 	collection := ss.mongoDB.Collection(collectionValidators)
 	if collection == nil {
@@ -39,7 +39,7 @@ func (ss *StorageSrv) GetValidatorById(id string) (validator *Validator, err err
 	}
 
 	// make a request with the filter
-	cur, err := collection.Find(context.Background(), filter)
+	cur, err := collection.Find(ctx, filter)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			err = ErrParticipantNotExists
@@ -48,7 +48,7 @@ func (ss *StorageSrv) GetValidatorById(id string) (validator *Validator, err err
 		return
 	}
 
-	for cur.Next(context.Background()) {
+	for cur.Next(ctx) {
 		if err := cur.Decode(&validator); err != nil {
 			return nil, err
 		}
@@ -59,7 +59,7 @@ func (ss *StorageSrv) GetValidatorById(id string) (validator *Validator, err err
 	return nil, nil
 }
 
-func (ss *StorageSrv) UpdateValidatorInfo(validator *Validator) error {
+func (ss *StorageSrv) UpdateValidatorInfo(ctx context.Context, validator *Validator) error {
 	validator.UpdatedAt = time.Now().UTC()
 	filter := bson.M{"id": validator.ID}
 	collection := ss.mongoDB.Collection(collectionValidators)
@@ -71,5 +71,5 @@ func (ss *StorageSrv) UpdateValidatorInfo(validator *Validator) error {
 		"$set": validator,
 	}
 
-	return collection.FindOneAndUpdate(context.Background(), filter, update).Err()
+	return collection.FindOneAndUpdate(ctx, filter, update).Err()
 }

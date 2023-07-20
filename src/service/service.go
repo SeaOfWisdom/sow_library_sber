@@ -11,7 +11,10 @@ import (
 	contractor "github.com/SeaOfWisdom/sow_proto/contractor-srv"
 )
 
-const ServiceName = "sow_library"
+const (
+	ServiceName = "sow_library"
+	faucetCount = "50000000000000000000" // 50 ETH
+)
 
 var ErrNoReviews = errors.New("there are no reviews")
 
@@ -33,7 +36,7 @@ func NewLibrarySrv(log *log.Logger, str *storage.StorageSrv, contractorSrv contr
 	}
 }
 
-func (lb *LibrarySrv) Start() {
+func (ls *LibrarySrv) Start() {
 	// // get all works from the library
 	// works, err := lb.GetAllWorks(config.AdminAddresses["chillhacker"])
 	// if err != nil {
@@ -47,13 +50,32 @@ func (lb *LibrarySrv) Start() {
 
 // --- Handles
 
-func (ls *LibrarySrv) CreateParticipant(nickname, web3Address string) (*storage.Participant, error) {
+func (ls *LibrarySrv) CreateParticipant(ctx context.Context, nickname, web3Address string) (*storage.Participant, error) {
 	participant, err := ls.storage.CreateParticipant(nickname, web3Address)
 	if err != nil {
 		ls.log.Errorf("CreateParticipant: error create participant, err: %v", err)
 
 		return nil, err
 	}
+
+	out, err := ls.contractorSrv.AddParticipant(ctx, &contractor.AccountRequest{
+		Address: web3Address,
+	})
+	if err != nil {
+		ls.log.Errorf("CreateParticipant: error add participant to the chain, err: %v", err)
+
+		return nil, err
+	}
+
+	if out.ErrorMsg != "" {
+		err = fmt.Errorf("error add participant to the chain, err: %s", out.ErrorMsg)
+
+		ls.log.Errorf("CreateParticipant: %v", err)
+
+		return nil, err
+	}
+
+	ls.log.Infof("CreateParticipant: successfully added participant to chain, tx hash - %s", out.TxHash)
 
 	return participant, nil
 }
@@ -81,15 +103,12 @@ func (ls *LibrarySrv) BecomeAuthor(web3Address, emailAddress, name, surname stri
 	// get the current participant and vefiry his role, status
 	participant, err := ls.storage.GetParticipantByAddress(web3Address)
 	if err != nil {
-
 		ls.log.Errorf("BecomeAuthor: error get participant with address %s, err: %v", web3Address, err)
-
 		return nil, err
 	}
 	participant.Role = storage.AuthorRole
 
 	if err = ls.storage.UpdateParticipantRole(participant.ID, storage.AuthorRole); err != nil {
-
 		ls.log.Errorf("BecomeAuthor: error update participant role, err: %v", err)
 
 		return nil, fmt.Errorf("while updating the participant's role, err: %w", err)
@@ -97,16 +116,27 @@ func (ls *LibrarySrv) BecomeAuthor(web3Address, emailAddress, name, surname stri
 
 	// create a new record for the author
 	if err = ls.storage.CreateAuthor(participant.ID, emailAddress, name, surname); err != nil {
-
 		ls.log.Errorf("BecomeAuthor: error create author, err: %v", err)
 
 		return nil, fmt.Errorf("while creating an author, err: %w", err)
 	}
 
+	// let's add the new author into SowLibrary
+	txHash, err := ls.contractorSrv.MakeAuthor(context.Background(), &contractor.AccountRequest{
+		Address: web3Address,
+	})
+	if err != nil {
+		ls.log.Errorf("BecomeAuthor: error create author, err: %v", err)
+
+		return nil, fmt.Errorf("while creating an author, err: %w", err)
+	}
+
+	ls.log.Infof("the new author was added with tx: %s", txHash)
+
 	return participant, nil
 }
 
-func (ls *LibrarySrv) GetAuthor(web3Address string) (*storage.AuthorResponse, error) {
+func (ls *LibrarySrv) GetAuthor(ctx context.Context, web3Address string) (*storage.AuthorResponse, error) {
 	// get the current participant and vefiry his role, status
 	participant, err := ls.storage.GetParticipantByAddress(web3Address)
 	if err != nil {
@@ -121,7 +151,7 @@ func (ls *LibrarySrv) GetAuthor(web3Address string) (*storage.AuthorResponse, er
 	}
 
 	// get author info
-	author, err := ls.storage.GetAuthorById(participant.ID)
+	author, err := ls.storage.GetAuthorById(ctx, participant.ID)
 	if err != nil {
 		ls.log.Errorf("GetAuthor: error get the author by id, err: %v", err)
 
@@ -134,7 +164,7 @@ func (ls *LibrarySrv) GetAuthor(web3Address string) (*storage.AuthorResponse, er
 	}, nil
 }
 
-func (ls *LibrarySrv) GetValidator(web3Address string) (*storage.ValidatorResponse, error) {
+func (ls *LibrarySrv) GetValidator(ctx context.Context, web3Address string) (*storage.ValidatorResponse, error) {
 	// get the current participant and vefiry his role, status
 	participant, err := ls.storage.GetParticipantByAddress(web3Address)
 	if err != nil {
@@ -149,7 +179,7 @@ func (ls *LibrarySrv) GetValidator(web3Address string) (*storage.ValidatorRespon
 	}
 
 	// get validator info
-	validator, err := ls.storage.GetValidatorById(participant.ID)
+	validator, err := ls.storage.GetValidatorById(ctx, participant.ID)
 	if err != nil {
 		ls.log.Errorf("GetValidator: error get the validator by id, err, err: %v", err)
 
@@ -163,6 +193,7 @@ func (ls *LibrarySrv) GetValidator(web3Address string) (*storage.ValidatorRespon
 }
 
 func (ls *LibrarySrv) UpdateAuthorInfo(
+	ctx context.Context,
 	web3Address,
 	emailAddress,
 	name,
@@ -174,7 +205,7 @@ func (ls *LibrarySrv) UpdateAuthorInfo(
 	sciences []string,
 ) (*storage.Participant, error) {
 	// try to get the author record
-	authorResp, err := ls.GetAuthor(web3Address)
+	authorResp, err := ls.GetAuthor(ctx, web3Address)
 	if err != nil {
 		return nil, err
 	}
@@ -183,30 +214,37 @@ func (ls *LibrarySrv) UpdateAuthorInfo(
 		// it needs verification to be added here
 		authorResp.AuthorInfo.EmailAddress = emailAddress
 	}
+
 	if name != "" {
 		authorResp.AuthorInfo.Name = name
 	}
+
 	if middlename != "" {
 		authorResp.AuthorInfo.MiddleName = middlename
 	}
+
 	if surname != "" {
 		authorResp.AuthorInfo.Surname = surname
 	}
+
 	if orcid != "" {
 		authorResp.AuthorInfo.Orcid = orcid
 	}
+
 	if scholarShipProfile != "" {
 		authorResp.AuthorInfo.ScholarShipProfile = scholarShipProfile
 	}
+
 	if language != "" {
 		authorResp.AuthorInfo.Language = language
 	}
+
 	if len(sciences) > 0 {
 		authorResp.AuthorInfo.Sciences = sciences
 	}
 
 	// update the Auhtor info in the storage(MongoDB)
-	if err = ls.storage.UpdateAuthorInfo(authorResp.AuthorInfo); err != nil {
+	if err = ls.storage.UpdateAuthorInfo(ctx, authorResp.AuthorInfo); err != nil {
 		ls.log.Errorf("UpdateAuthorInfo: error update author info, err: %v", err)
 
 		return nil, err
@@ -217,7 +255,7 @@ func (ls *LibrarySrv) UpdateAuthorInfo(
 
 /// Validator
 
-func (ls *LibrarySrv) BecomeValidator(web3Address, emailAddress, name, surname string) (*storage.Participant, error) {
+func (ls *LibrarySrv) BecomeValidator(ctx context.Context, web3Address, emailAddress, name, surname string) (*storage.Participant, error) {
 	// get the current participant and vefiry his role, status
 	participant, err := ls.storage.GetParticipantByAddress(web3Address)
 	if err != nil {
@@ -225,6 +263,7 @@ func (ls *LibrarySrv) BecomeValidator(web3Address, emailAddress, name, surname s
 
 		return nil, err
 	}
+
 	participant.Role = storage.ValidatorRole
 
 	if err = ls.storage.UpdateParticipantRole(participant.ID, storage.ValidatorRole); err != nil {
@@ -234,16 +273,30 @@ func (ls *LibrarySrv) BecomeValidator(web3Address, emailAddress, name, surname s
 	}
 
 	// create a new record for the validator
-	if err := ls.storage.CreateValidator(participant.ID, emailAddress, name, surname); err != nil {
+	if err := ls.storage.CreateValidator(ctx, participant.ID, emailAddress, name, surname); err != nil {
 		ls.log.Errorf("BecomeValidator: error create validator, err: %v", err)
 
 		return nil, fmt.Errorf("while creating validator, err: %v", err)
 	}
 
+	// let's add the new reviewer into SowLibrary
+	txHash, err := ls.contractorSrv.MakeReviewer(ctx, &contractor.AccountRequest{
+		Address: web3Address,
+	})
+	if err != nil {
+		ls.log.Errorf("BecomeValidator: make reviewer, err: %v", err)
+
+		return nil, fmt.Errorf("make reviewer, err: %v", err)
+	}
+
+	ls.log.Infof("the new reviewer was added with tx: %s", txHash)
+
 	return participant, nil
 }
 
-func (ls *LibrarySrv) UpdateValidator(web3Address,
+func (ls *LibrarySrv) UpdateValidator(
+	ctx context.Context,
+	web3Address,
 	emailAddress,
 	name,
 	middlename,
@@ -253,7 +306,7 @@ func (ls *LibrarySrv) UpdateValidator(web3Address,
 	sciences []string,
 ) (*storage.Participant, error) {
 	// try to get the author record
-	validatorResp, err := ls.GetValidator(web3Address)
+	validatorResp, err := ls.GetValidator(ctx, web3Address)
 	if err != nil {
 		return nil, err
 	}
@@ -262,27 +315,33 @@ func (ls *LibrarySrv) UpdateValidator(web3Address,
 		// it needs verification to be added here
 		validatorResp.ValidatorInfo.EmailAddress = emailAddress
 	}
+
 	if name != "" {
 		validatorResp.ValidatorInfo.Name = name
 	}
+
 	if middlename != "" {
 		validatorResp.ValidatorInfo.MiddleName = middlename
 	}
+
 	if surname != "" {
 		validatorResp.ValidatorInfo.Surname = surname
 	}
+
 	if orcid != "" {
 		validatorResp.ValidatorInfo.Orcid = orcid
 	}
+
 	if language != "" {
 		validatorResp.ValidatorInfo.Language = language
 	}
+
 	if len(sciences) > 0 {
 		validatorResp.ValidatorInfo.Sciences = sciences
 	}
 
 	// update the Auhtor info in the storage(MongoDB)
-	if err = ls.storage.UpdateValidatorInfo(validatorResp.ValidatorInfo); err != nil {
+	if err = ls.storage.UpdateValidatorInfo(ctx, validatorResp.ValidatorInfo); err != nil {
 		ls.log.Errorf("UpdateValidator: error update validator info, err: %v", err)
 
 		return nil, err
@@ -319,63 +378,75 @@ func (ls *LibrarySrv) PublishWork(ctx context.Context, authorAddress string, wor
 
 	fmt.Println("CREATED WORK ID: ", workID)
 	// get the new work
-	workResp, err := ls.storage.GetWorkByID(workID)
+	workResp, err := ls.storage.GetWorkByID(ctx, workID)
 	if err != nil {
 		ls.log.Errorf("PublishWork: error get work by id %s, err: %v", workID, err)
 
 		return nil, "", err
 	}
 
+	ls.contractorSrv.PublishWork(ctx, &contractor.PublishWorkRequest{
+		Name:    work.Name,
+		Uri:     "DUMMY URI",
+		WorkId:  workResp.Work.ID,
+		Authors: []string{authorAddress},
+		Price:   faucetCount,
+	})
+
 	return workResp, "TX_ID", nil
 }
 
 // PurchaseWork ...
-func (ls *LibrarySrv) PurchaseWork(readerAddress, workID string) (string, string, error) {
+func (ls *LibrarySrv) PurchaseWork(ctx context.Context, readerAddress, workID string, contract bool) error {
 	// check for the existence of the participant
 	participant, err := ls.storage.GetParticipantByAddress(readerAddress)
 	if err != nil {
 		ls.log.Errorf("PurchaseWork: error get participant with address %s, err: %v", readerAddress, err)
 
-		return "", "", err
+		return err
 	}
 	// get work by id
-	work, err := ls.storage.GetWorkByID(workID)
+	work, err := ls.storage.GetWorkByID(ctx, workID)
 	if err != nil {
 		ls.log.Errorf("PurchaseWork: error get work by id %s, err: %v", workID, err)
 
-		return "", "", fmt.Errorf("haven't got the work with id: %s", workID)
+		return fmt.Errorf("haven't got the work with id: %s", workID)
 	}
 
 	// check if he has already purchased the work
 	if ls.storage.PurchasedWorkOrNot(participant.ID, workID) {
-		return "", "", fmt.Errorf("you have already purchased this work")
+		return fmt.Errorf("you have already purchased this work")
 	}
 
-	// burn some tokens from the buyer address
-	// mint some token to the author address
-	purchaseWorkResp, err := ls.contractorSrv.PurchaseWork(context.Background(), &contractor.PurchaseWorkRequest{
-		WorkId:        workID,
-		ReaderAddress: participant.Web3Address,
-		AuthorAddress: work.Author.BasicInfo.Web3Address,
-		Price:         work.Work.Price,
-	})
-	if err != nil {
-		// todo errors.As()
-		if !strings.Contains(err.Error(), "insufficient") {
-			ls.log.Errorf("PurchaseWork: insufficient work, err: %v", err)
+	if !contract {
+		// burn some tokens from the buyer address
+		// mint some token to the author address
+		purchaseWorkResp, err := ls.contractorSrv.PurchaseWork(ctx, &contractor.PurchaseWorkRequest{
+			WorkId:        workID,
+			ReaderAddress: participant.Web3Address,
+			AuthorAddress: work.Author.BasicInfo.Web3Address,
+			Price:         work.Work.Price,
+		})
+		if err != nil {
+			// todo errors.As()
+			if !strings.Contains(err.Error(), "insufficient") {
+				ls.log.Errorf("PurchaseWork: insufficient work, err: %v", err)
+			}
+
+			return err
 		}
 
-		return "", "", err
-	}
+		ls.log.Infof("readerTxHash: %s| authorTxHash: %s", purchaseWorkResp.ReaderTxStatus.TxHash, purchaseWorkResp.AuthorTxStatus.TxHash)
 
+	}
 	// create work in Mongo and PostgreSQL databases
 	if err = ls.storage.PurchaseWork(participant.ID, workID); err != nil {
 		ls.log.Errorf("PurchaseWork: error purchase, participant id %s work id %s, err: %v", participant.ID, workID, err)
 
-		return "", "", fmt.Errorf("while buying the work, err: %v", err)
+		return fmt.Errorf("while buying the work, err: %v", err)
 	}
 
-	return purchaseWorkResp.ReaderTxStatus.TxHash, purchaseWorkResp.AuthorTxStatus.TxHash, nil
+	return nil
 }
 
 // PurchaseWork ...
@@ -391,9 +462,9 @@ func (ls *LibrarySrv) PurchasedWorks(ctx context.Context, readerAddress string) 
 	return works, nil
 }
 
-func (ls *LibrarySrv) GetPendingWorks() ([]*storage.WorkResponse, error) {
+func (ls *LibrarySrv) GetPendingWorks(ctx context.Context) ([]*storage.WorkResponse, error) {
 	// check for the existence of the participant
-	works, err := ls.storage.GetPendingWorks()
+	works, err := ls.storage.GetPendingWorks(ctx)
 	if err != nil {
 		ls.log.Errorf("GetPendingWorks: error get pending works, err: %v", err)
 
@@ -403,9 +474,9 @@ func (ls *LibrarySrv) GetPendingWorks() ([]*storage.WorkResponse, error) {
 	return works, nil
 }
 
-func (ls *LibrarySrv) GetAllWorks(readerAddress string) ([]*storage.WorkResponse, error) {
+func (ls *LibrarySrv) GetAllWorks(ctx context.Context, readerAddress string) ([]*storage.WorkResponse, error) {
 	// check for the existence of the participant
-	works, err := ls.storage.GetAllWorks(readerAddress)
+	works, err := ls.storage.GetAllWorks(ctx, readerAddress)
 	if err != nil {
 		ls.log.Errorf("GetAllWorks: error get all works, err: %v", err)
 
@@ -415,9 +486,9 @@ func (ls *LibrarySrv) GetAllWorks(readerAddress string) ([]*storage.WorkResponse
 	return works, nil
 }
 
-func (ls *LibrarySrv) GetWorksByKeyWords(readerAddress string, keyWords []string) ([]*storage.WorkResponse, error) {
+func (ls *LibrarySrv) GetWorksByKeyWords(ctx context.Context, readerAddress string, keyWords []string) ([]*storage.WorkResponse, error) {
 	// check for the existence of the participant
-	works, err := ls.storage.GetWorkByKeyWords(readerAddress, keyWords)
+	works, err := ls.storage.GetWorkByKeyWords(ctx, readerAddress, keyWords)
 	if err != nil {
 		ls.log.Errorf("GetWorksByKeyWords: error get works by keywords %v, err: %v", keyWords, err)
 
@@ -427,9 +498,9 @@ func (ls *LibrarySrv) GetWorksByKeyWords(readerAddress string, keyWords []string
 	return works, nil
 }
 
-func (ls *LibrarySrv) GetWorkByID(authorAddress, workID string) (*storage.WorkResponse, error) {
+func (ls *LibrarySrv) GetWorkByID(ctx context.Context, authorAddress, workID string) (*storage.WorkResponse, error) {
 	// check for the existence of the participant
-	work, err := ls.storage.GetWorkByID(workID)
+	work, err := ls.storage.GetWorkByID(ctx, workID)
 	if err != nil {
 		ls.log.Errorf("GetWorkByID: error get work by id %s, err: %v", workID, err)
 
@@ -439,9 +510,9 @@ func (ls *LibrarySrv) GetWorkByID(authorAddress, workID string) (*storage.WorkRe
 	return work, nil
 }
 
-func (ls *LibrarySrv) GetWorksByAuthorAddress(readerAddress, authorAddress string) ([]*storage.WorkResponse, error) {
+func (ls *LibrarySrv) GetWorksByAuthorAddress(ctx context.Context, readerAddress, authorAddress string) ([]*storage.WorkResponse, error) {
 	// check for the existence of the participant
-	works, err := ls.storage.GetWorksByAuthorAddress(readerAddress, authorAddress)
+	works, err := ls.storage.GetWorksByAuthorAddress(ctx, readerAddress, authorAddress)
 	if err != nil {
 		ls.log.Errorf("GetWorksByAuthorAddress: error get work by reader and author addresses %s, %s, err: %v", readerAddress, authorAddress, err)
 
@@ -456,9 +527,9 @@ func (ls *LibrarySrv) GetWorksByAuthorAddress(readerAddress, authorAddress strin
 // 2. publish to the IPFS
 // 3. publish fingerPrint to the Library.sol
 // returns: publish txId, error
-func (ls *LibrarySrv) ApproveWork(workID string) error {
+func (ls *LibrarySrv) ApproveWork(ctx context.Context, workID string) error {
 	// check for the existence of the participant
-	if err := ls.storage.ApproveWork(workID); err != nil {
+	if err := ls.storage.ApproveWork(ctx, workID); err != nil {
 		return fmt.Errorf("haven't got the participant with address %s", err)
 	}
 
@@ -481,9 +552,9 @@ func (ls *LibrarySrv) ApproveWork(workID string) error {
 	// return id, "TX_ID", nil
 }
 
-func (ls *LibrarySrv) RemoveWork(workID string) error {
+func (ls *LibrarySrv) RemoveWork(ctx context.Context, workID string) error {
 	// check for the existence of the participant
-	if err := ls.storage.RemoveWork(workID); err != nil {
+	if err := ls.storage.RemoveWork(ctx, workID); err != nil {
 		ls.log.Errorf("RemoveWork: error remove work by work id %s, err: %v", workID, err)
 
 		return err
@@ -533,7 +604,7 @@ func (ls *LibrarySrv) CreateBookmark(readerAddress, workID string) error {
 	return ls.storage.CreateBookmark(participant.ID, work.WorkID)
 }
 
-func (ls *LibrarySrv) GetBookmarksOf(readerAddress string) ([]*storage.WorkResponse, error) {
+func (ls *LibrarySrv) GetBookmarksOf(ctx context.Context, readerAddress string) ([]*storage.WorkResponse, error) {
 	// get the participant by his address
 	participant, err := ls.storage.GetParticipantByAddress(readerAddress)
 	if err != nil {
@@ -542,7 +613,7 @@ func (ls *LibrarySrv) GetBookmarksOf(readerAddress string) ([]*storage.WorkRespo
 		return nil, err
 	}
 	// get the participant's bookmarks
-	return ls.storage.GetBookmarksByParticipantID(participant.ID)
+	return ls.storage.GetBookmarksByParticipantID(ctx, participant.ID)
 }
 
 func (ls *LibrarySrv) RemoveBookmark(readerAddress, workID string) error {
@@ -594,7 +665,7 @@ func (ls *LibrarySrv) CreateOrUpdateWorkReview(ctx context.Context, validatorAdd
 }
 
 // GetWorkReviewByWorkID ...
-func (ls *LibrarySrv) GetValidatorWorkReviewByWorkID(validatorAddress, workID string) (*storage.WorkReview, error) {
+func (ls *LibrarySrv) GetValidatorWorkReviewByWorkID(ctx context.Context, validatorAddress, workID string) (*storage.WorkReview, error) {
 	// get the current participant and vefiry his role, status
 	participant, err := ls.storage.GetParticipantByAddress(validatorAddress)
 	if err != nil {
@@ -607,7 +678,7 @@ func (ls *LibrarySrv) GetValidatorWorkReviewByWorkID(validatorAddress, workID st
 		return nil, fmt.Errorf("the participant is not validator")
 	}
 
-	review, err := ls.storage.GetReviewByValidatorAndWorkID(participant.ID, workID)
+	review, err := ls.storage.GetReviewByValidatorAndWorkID(ctx, participant.ID, workID)
 	if err != nil {
 		ls.log.Errorf("GetValidatorWorkReviewByWorkID: error get review, err: %v", err)
 
@@ -618,7 +689,7 @@ func (ls *LibrarySrv) GetValidatorWorkReviewByWorkID(validatorAddress, workID st
 }
 
 // GetWorkReviewsByWorkID ...
-func (ls *LibrarySrv) GetWorkReviewsByWorkID(authorAddress, workID string) ([]*storage.WorkReview, error) {
+func (ls *LibrarySrv) GetWorkReviewsByWorkID(ctx context.Context, authorAddress, workID string) ([]*storage.WorkReview, error) {
 	// get the current participant and vefiry his role, status
 	participant, err := ls.storage.GetParticipantByAddress(authorAddress)
 	if err != nil {
@@ -629,7 +700,7 @@ func (ls *LibrarySrv) GetWorkReviewsByWorkID(authorAddress, workID string) ([]*s
 		return nil, fmt.Errorf("the participant is not author")
 	}
 
-	reviews, err := ls.storage.GetReviewByAuthorAndWorkID(participant.ID, workID)
+	reviews, err := ls.storage.GetReviewByAuthorAndWorkID(ctx, participant.ID, workID)
 	if err != nil {
 		return nil, fmt.Errorf("while getting the work's reviews, err: %v", err)
 	}
@@ -710,7 +781,7 @@ func (ls *LibrarySrv) SubmitWorkReview(ctx context.Context, validatorAddress, wo
 func (ls *LibrarySrv) Faucet(account string) (string, error) {
 	purchaseWorkResp, err := ls.contractorSrv.Faucet(context.Background(), &contractor.FaucetRequest{
 		Address: account,
-		Amount:  "50000000000000000000", // 50 ETH
+		Amount:  faucetCount,
 	})
 	if err != nil {
 		return "", err

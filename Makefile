@@ -1,3 +1,5 @@
+export GOPRIVATE=github.com/SeaOfWisdom
+
 ifneq (,$(wildcard .env))
 	include .env
 	export

@@ -94,17 +94,18 @@ type ValidatorResponse struct {
 
 type Work struct {
 	// BASE INFORMATION
-	ID         string    `json:"id"`
-	Name       string    `json:"name"`
-	Annotation string    `json:"annotation"`
-	AuthorID   string    `bson:"author_id" json:"-"`
-	CreatedAt  time.Time `bson:"created_at" json:"created_at"`
-	UpdatedAt  time.Time `bson:"updated_at" json:"-"`
-	ReleasedAt time.Time `bson:"released_at" json:"-"`
-	Tags       []string  `jsob:"tags"`
-	Price      string    `json:"price,omitempty"`
-	Sources    string    `json:"sources,omitempty"`
-	Language   string    `json:"language,omitempty"`
+	ID         string     `json:"id"`
+	Name       string     `json:"name"`
+	Annotation string     `json:"annotation"`
+	AuthorID   string     `bson:"author_id" json:"-"`
+	CreatedAt  time.Time  `bson:"created_at" json:"created_at"`
+	UpdatedAt  time.Time  `bson:"updated_at" json:"-"`
+	ReleasedAt time.Time  `bson:"released_at" json:"-"`
+	Tags       []string   `jsob:"tags"`
+	Price      string     `json:"price,omitempty"`
+	Sources    string     `json:"sources,omitempty"`
+	Language   string     `json:"language,omitempty"`
+	Status     WorkStatus `bson:"status" json:"status,omitempty"`
 	// BODY INFORMATION
 	Content *WorkContent `json:"content"`
 }

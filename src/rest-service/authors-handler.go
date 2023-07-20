@@ -1,7 +1,6 @@
 package rest
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -35,27 +34,31 @@ func (rs *RestSrv) HandleBecomeAuthorData(w http.ResponseWriter, r *http.Request
 func (rs *RestSrv) HandleBecomeAuthor(w http.ResponseWriter, r *http.Request) {
 	web3Address, err := rs.getWeb3Address(r)
 	if err != nil {
-		responError(w, http.StatusBadGateway, err.Error())
+		responError(w, http.StatusUnauthorized, err.Error())
+
 		return
 	}
 
 	request := new(BecomeAuthorRequest)
 	if err := rs.getRequest(r.Body, request); err != nil {
 		responError(w, http.StatusBadRequest, err.Error())
+
 		return
 	}
 
 	// request author
 	participant, err := rs.libSrv.BecomeAuthor(web3Address, request.EmailAddress, request.Name, request.Surname)
 	if err != nil {
-		responError(w, http.StatusBadGateway, err.Error())
+		responError(w, http.StatusInternalServerError, err.Error())
+
 		return
 	}
 
 	// generate a new jwt token for him
-	jwt, err := rs.getJWTToken(participant.ID, web3Address, participant.Language, int64(participant.Role))
+	jwt, err := rs.getJWTToken(r.Context(), participant.ID, web3Address, participant.Language, int64(participant.Role))
 	if err != nil {
-		responError(w, http.StatusBadGateway, "something went wrong, our apologies")
+		responError(w, http.StatusInternalServerError, "something went wrong, our apologies")
+
 		return
 	}
 
@@ -77,6 +80,7 @@ func (rs *RestSrv) HandleInviteCoAuthor(w http.ResponseWriter, r *http.Request) 
 	request := new(BecomeAuthorRequest)
 	if err := rs.getRequest(r.Body, request); err != nil {
 		responError(w, http.StatusBadRequest, err.Error())
+
 		return
 	}
 
@@ -99,14 +103,16 @@ func (rs *RestSrv) HandleAuthorInfo(w http.ResponseWriter, r *http.Request) {
 	authorAddress, ok := vars["web3_address"]
 	if !ok {
 		responError(w, http.StatusBadRequest, "null request param")
+
 		return
 	}
-	rs.logger.Info(fmt.Sprintf("request author address: %s", authorAddress))
+	rs.logger.Infof("HandleAuthorInfo: request author address: %s", authorAddress)
 
 	// request author
-	authorResp, err := rs.libSrv.GetAuthor(authorAddress)
+	authorResp, err := rs.libSrv.GetAuthor(r.Context(), authorAddress)
 	if err != nil {
-		responError(w, http.StatusBadGateway, err.Error())
+		responError(w, http.StatusInternalServerError, err.Error())
+
 		return
 	}
 
@@ -125,19 +131,24 @@ func (rs *RestSrv) HandleAuthorInfo(w http.ResponseWriter, r *http.Request) {
 // @Security Bearer
 // @Router       /update_author_info [post]
 func (rs *RestSrv) HandleUpdateAuthor(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
 	web3Address, err := rs.getWeb3Address(r)
 	if err != nil {
-		responError(w, http.StatusBadGateway, err.Error())
+		responError(w, http.StatusUnauthorized, err.Error())
+
 		return
 	}
 
 	request := new(UpdateAuthorRequest)
 	if err := rs.getRequest(r.Body, request); err != nil {
-		responError(w, http.StatusBadRequest, err.Error())
+		responError(w, http.StatusInternalServerError, err.Error())
+
 		return
 	}
 
 	participant, err := rs.libSrv.UpdateAuthorInfo(
+		ctx,
 		web3Address,
 		request.EmailAddress,
 		request.Name,
@@ -149,14 +160,16 @@ func (rs *RestSrv) HandleUpdateAuthor(w http.ResponseWriter, r *http.Request) {
 		request.Sciences,
 	)
 	if err != nil {
-		responError(w, http.StatusBadRequest, err.Error())
+		responError(w, http.StatusInternalServerError, err.Error())
+
 		return
 	}
 
 	// generate a new jwt token for him
-	jwt, err := rs.getJWTToken(participant.ID, participant.Web3Address, participant.Language, int64(participant.Role))
+	jwt, err := rs.getJWTToken(ctx, participant.ID, participant.Web3Address, participant.Language, int64(participant.Role))
 	if err != nil {
-		responError(w, http.StatusBadGateway, "something went wrong, our apologies")
+		responError(w, http.StatusInternalServerError, "something went wrong, our apologies")
+
 		return
 	}
 
@@ -177,7 +190,8 @@ func (rs *RestSrv) HandleUpdateAuthor(w http.ResponseWriter, r *http.Request) {
 func (rs *RestSrv) HandleGetWorkReviews(w http.ResponseWriter, r *http.Request) {
 	web3Address, err := rs.getWeb3Address(r)
 	if err != nil {
-		responError(w, http.StatusBadGateway, err.Error())
+		responError(w, http.StatusUnauthorized, err.Error())
+
 		return
 	}
 
@@ -185,16 +199,19 @@ func (rs *RestSrv) HandleGetWorkReviews(w http.ResponseWriter, r *http.Request) 
 	workId, ok := vars["work_id"]
 	if !ok {
 		responError(w, http.StatusBadRequest, "null request param")
+
 		return
 	}
-	rs.logger.Info(fmt.Sprintf("request work id: %s", workId))
+	rs.logger.Infof("HandleGetWorkReviews: request work id: %s", workId)
 
 	review, err := rs.libSrv.GetWorkReviewsByWorkID(
+		r.Context(),
 		web3Address,
 		workId,
 	)
 	if err != nil {
-		responError(w, http.StatusBadRequest, err.Error())
+		responError(w, http.StatusInternalServerError, err.Error())
+
 		return
 	}
 

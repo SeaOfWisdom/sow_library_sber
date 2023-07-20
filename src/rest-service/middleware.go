@@ -28,26 +28,31 @@ func (rs *RestSrv) jwtMiddleware(next http.Handler) http.Handler {
 		if len(path) > 1 {
 			requestUri = path[1]
 		} else {
-			rs.logger.Error(fmt.Sprintf("WRONG URL PATH: %v", path))
+			rs.logger.Errorf("wrong url path: %v", path)
 		}
+
 		for uri, requiredRole := range authURIs {
 			if strings.EqualFold(requestUri, uri) {
 				token, err := rs.getTokenFromHeader(r)
 				if err != nil {
-					rs.logger.Warn(fmt.Sprintf("while getting a jwt token from header, err: %v", err))
+					rs.logger.Warnf("while getting a jwt token from header, err: %v", err)
 					responError(w, http.StatusBadGateway, err.Error())
+
 					return
 				}
 				realRole, err = rs.VerifyJWT(token)
 				if err != nil {
 					responError(w, http.StatusBadGateway, err.Error())
+
 					return
 				}
 
 				if realRole < requiredRole {
 					responError(w, http.StatusNetworkAuthenticationRequired, "you haven't been granted access to this method")
+
 					return
 				}
+
 				break
 			}
 		}

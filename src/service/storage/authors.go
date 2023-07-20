@@ -31,7 +31,7 @@ func (ss *StorageSrv) CreateAuthor(postgesqlID, emailAddress, name, surname stri
 }
 
 // TODO rewrite without for loop
-func (ss *StorageSrv) GetAuthorById(id string) (author *Author, err error) {
+func (ss *StorageSrv) GetAuthorById(ctx context.Context, id string) (author *Author, err error) {
 	filter := bson.M{"id": id}
 	collection := ss.mongoDB.Collection(collectionAuthors)
 	if collection == nil {
@@ -39,7 +39,7 @@ func (ss *StorageSrv) GetAuthorById(id string) (author *Author, err error) {
 	}
 
 	// make a request with the filter
-	cur, err := collection.Find(context.Background(), filter)
+	cur, err := collection.Find(ctx, filter)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return
@@ -57,7 +57,7 @@ func (ss *StorageSrv) GetAuthorById(id string) (author *Author, err error) {
 	return
 }
 
-func (ss *StorageSrv) getAuthorsByFilter(options map[string]interface{}, preRead bool) (works []*Work, err error) {
+func (ss *StorageSrv) getAuthorsByFilter(ctx context.Context, options map[string]interface{}, preRead bool) (works []*Work, err error) {
 	// pack all filter opt together
 	filter := bson.D{}
 	for key, value := range options {
@@ -70,7 +70,7 @@ func (ss *StorageSrv) getAuthorsByFilter(options map[string]interface{}, preRead
 	}
 
 	// make a request with the filter
-	cur, err := collection.Find(context.Background(), filter)
+	cur, err := collection.Find(ctx, filter)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, nil
@@ -79,15 +79,16 @@ func (ss *StorageSrv) getAuthorsByFilter(options map[string]interface{}, preRead
 		return nil, err
 	}
 
-	if err = cur.All(context.Background(), &works); err != nil {
-		ss.log.Error(fmt.Sprintf("while decoding works, err: %v", err))
+	if err = cur.All(ctx, &works); err != nil {
+		ss.log.Errorf("while decoding works, err: %v", err)
+
 		return nil, err
 	}
 
 	return works, nil
 }
 
-func (ss *StorageSrv) UpdateAuthorInfo(author *Author) error {
+func (ss *StorageSrv) UpdateAuthorInfo(ctx context.Context, author *Author) error {
 	author.UpdatedAt = time.Now().UTC()
 	filter := bson.M{"id": author.ID}
 	collection := ss.mongoDB.Collection(collectionAuthors)
@@ -99,5 +100,5 @@ func (ss *StorageSrv) UpdateAuthorInfo(author *Author) error {
 		"$set": author,
 	}
 
-	return collection.FindOneAndUpdate(context.Background(), filter, update).Err()
+	return collection.FindOneAndUpdate(ctx, filter, update).Err()
 }

@@ -2,8 +2,7 @@ package rest
 
 import (
 	"errors"
-	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	srv "github.com/SeaOfWisdom/sow_library/src/service"
@@ -31,29 +30,35 @@ import (
 // @Security Bearer
 // @Router       /become_validator [post]
 func (rs *RestSrv) HandleBecomeValidator(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
 	web3Address, err := rs.getWeb3Address(r)
 	if err != nil {
-		responError(w, http.StatusBadGateway, err.Error())
+		responError(w, http.StatusUnauthorized, err.Error())
+
 		return
 	}
 
 	request := new(BecomeValidatorRequest)
 	if err := rs.getRequest(r.Body, request); err != nil {
-		responError(w, http.StatusBadRequest, err.Error())
+		responError(w, http.StatusInternalServerError, err.Error())
+
 		return
 	}
 
 	// request author
-	participant, err := rs.libSrv.BecomeValidator(web3Address, request.EmailAddress, request.Name, request.Surname)
+	participant, err := rs.libSrv.BecomeValidator(ctx, web3Address, request.EmailAddress, request.Name, request.Surname)
 	if err != nil {
-		responError(w, http.StatusBadGateway, err.Error())
+		responError(w, http.StatusInternalServerError, err.Error())
+
 		return
 	}
 
 	// generate a new jwt token for him
-	jwt, err := rs.getJWTToken(participant.ID, web3Address, participant.Language, int64(participant.Role))
+	jwt, err := rs.getJWTToken(ctx, participant.ID, web3Address, participant.Language, int64(participant.Role))
 	if err != nil {
-		responError(w, http.StatusBadGateway, "something went wrong, our apologies")
+		responError(w, http.StatusInternalServerError, "something went wrong, our apologies")
+
 		return
 	}
 
@@ -75,14 +80,17 @@ func (rs *RestSrv) HandleValidatorInfo(w http.ResponseWriter, r *http.Request) {
 	validatorAddress, ok := vars["web3_address"]
 	if !ok {
 		responError(w, http.StatusBadRequest, "null request param")
+
 		return
 	}
-	rs.logger.Info(fmt.Sprintf("request validator address: %s", validatorAddress))
+
+	rs.logger.Infof("HandleValidatorInfo: request validator address: %s", validatorAddress)
 
 	// request validator
-	validatorResp, err := rs.libSrv.GetValidator(validatorAddress)
+	validatorResp, err := rs.libSrv.GetValidator(r.Context(), validatorAddress)
 	if err != nil {
-		responError(w, http.StatusBadGateway, err.Error())
+		responError(w, http.StatusInternalServerError, err.Error())
+
 		return
 	}
 
@@ -101,19 +109,24 @@ func (rs *RestSrv) HandleValidatorInfo(w http.ResponseWriter, r *http.Request) {
 // @Security Bearer
 // @Router       /update_validator_info [post]
 func (rs *RestSrv) HandleUpdateValidator(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
 	web3Address, err := rs.getWeb3Address(r)
 	if err != nil {
-		responError(w, http.StatusBadGateway, err.Error())
+		responError(w, http.StatusUnauthorized, err.Error())
+
 		return
 	}
 
 	request := new(UpdateValidatorRequest)
 	if err := rs.getRequest(r.Body, request); err != nil {
-		responError(w, http.StatusBadRequest, err.Error())
+		responError(w, http.StatusInternalServerError, err.Error())
+
 		return
 	}
 
 	participant, err := rs.libSrv.UpdateValidator(
+		ctx,
 		web3Address,
 		request.EmailAddress,
 		request.Name,
@@ -124,14 +137,16 @@ func (rs *RestSrv) HandleUpdateValidator(w http.ResponseWriter, r *http.Request)
 		request.Sciences,
 	)
 	if err != nil {
-		responError(w, http.StatusBadRequest, err.Error())
+		responError(w, http.StatusInternalServerError, err.Error())
+
 		return
 	}
 
 	// generate a new jwt token for him
-	jwt, err := rs.getJWTToken(participant.ID, participant.Web3Address, participant.Language, int64(participant.Role))
+	jwt, err := rs.getJWTToken(ctx, participant.ID, participant.Web3Address, participant.Language, int64(participant.Role))
 	if err != nil {
-		responError(w, http.StatusBadGateway, "something went wrong, our apologies")
+		responError(w, http.StatusInternalServerError, "something went wrong, our apologies")
+
 		return
 	}
 
@@ -149,72 +164,94 @@ func (rs *RestSrv) HandleUpdateValidator(w http.ResponseWriter, r *http.Request)
 // @Security Bearer
 // @Router       /validator_info/upload_docs [post]
 func (rs *RestSrv) HandleUploadValidatorDocs(w http.ResponseWriter, r *http.Request) {
-	web3Address, err := rs.getWeb3Address(r)
-	if err != nil {
-		responError(w, http.StatusBadGateway, err.Error())
-
-		return
-	}
-
-	participant, err := rs.libSrv.GetParticipantByWeb3Address(web3Address)
-	if err != nil {
-		responError(w, http.StatusNotFound, err.Error())
-
-		return
-	}
-
-	if participant.Role != storage.ValidatorRole {
-		responError(w, http.StatusForbidden, "your are not a validator")
-
-		return
-	}
-
 	// Parse our multipart form, 10 << 20 specifies a maximum
-	// upload of 10 MB files.
-	r.ParseMultipartForm(10 << 20)
-
-	docType := r.FormValue("type")
-	if docType == "" {
-		responError(w, http.StatusBadRequest, "undefined doc_type param")
-
-		return
-	}
-
-	rs.logger.Info(fmt.Sprintf("doc type: %s", docType))
-
-	file, _, err := r.FormFile("doc")
+	// upload of 20 MB files.
+	err := r.ParseMultipartForm(10 << 20)
 	if err != nil {
 		responError(w, http.StatusBadRequest, err.Error())
 
 		return
 	}
-	defer file.Close()
+
+	forwardFile, fHandler, err := r.FormFile("forward_doc")
+	if err != nil {
+		responError(w, http.StatusBadRequest, err.Error())
+
+		return
+	}
+
+	backwardFile, bHandler, err := r.FormFile("backward_doc")
+	if err != nil {
+		responError(w, http.StatusBadRequest, err.Error())
+
+		return
+	}
+
+	defer func() {
+		forwardFile.Close()
+		backwardFile.Close()
+	}()
+
+	rs.logger.Infof("HandleUploadValidatorDocs: uploaded forward image: %+v, size - %d, mime header - %+v", fHandler.Filename, fHandler.Size, fHandler.Header)
+	rs.logger.Infof("HandleUploadValidatorDocs: uploaded backward image: %+v, size - %d, mime header - %+v", bHandler.Filename, bHandler.Size, bHandler.Header)
 
 	// read all of the contents of our uploaded file into a
 	// byte array
 
 	/// !!!! TODO !!!!
-	imageBytes, err := ioutil.ReadAll(file)
+
+	fImageBytes, err := io.ReadAll(forwardFile)
 	if err != nil {
-		responError(w, http.StatusInternalServerError, "error read file")
+		rs.logger.Errorf("HandleUploadValidatorDocs: while read forward file to bytes, err: %v", err)
+		responJSON(w, http.StatusOK, SuccessMsg{Msg: "OK"})
 
 		return
 	}
 
-	imageResp, err := rs.ocrSrv.ExtractText(r.Context(), &ocr.ExtractTextRequest{
-		Image: imageBytes,
-	})
+	bImageBytes, err := io.ReadAll(backwardFile)
 	if err != nil {
-		err = fmt.Errorf("while extract text via ocr service, err: %v", err)
-		rs.logger.Error(err.Error())
-		responError(w, http.StatusInternalServerError, err.Error())
+		rs.logger.Error("HandleUploadValidatorDocs: while read backward file to bytes, err: %v", err)
+		responJSON(w, http.StatusOK, SuccessMsg{Msg: "OK"})
 
 		return
 	}
 
-	fmt.Println(imageResp)
+	resp, err := rs.ocrSrv.ExtractValidatorText(r.Context(), &ocr.ExtractValidatorRequest{ForwardImage: fImageBytes, BackwardImage: bImageBytes})
+	if err != nil {
+		rs.logger.Errorf("HandleUploadValidatorDocs: while extract text via ocr service, err: %v", err)
+		responJSON(w, http.StatusOK, SuccessMsg{Msg: "OK"})
 
-	responJSON(w, http.StatusOK, SuccessMsg{Msg: "OK"})
+		return
+	}
+
+	out := &ValidatorDocReview{
+		ValidatorForwardDoc: &ValidatorForwardDoc{
+			Number:  resp.ForwardInfo.Number,
+			Science: resp.ForwardInfo.Sciences,
+			Date:    resp.ForwardInfo.Date.AsTime(),
+		},
+		ValidatorBackwardDoc: &ValidatorBackwardDoc{
+			DiplomaNumber:       resp.BackwardInfo.Number,
+			DiplomaSerialNumber: resp.BackwardInfo.SerialNumber,
+			Date:                resp.BackwardInfo.Date.AsTime(),
+		},
+	}
+
+	// TODO
+	// Save documents to binary storage
+
+	// // Create a temporary file within our temp-images directory that follows
+	// // a particular naming pattern
+	// tempFile, err := ioutil.TempFile("temp-images", "upload-*.png")
+	// if err != nil {
+	// 	fmt.Println(err)
+	// }
+	// defer tempFile.Close()
+
+	// // write this byte array to our temporary file
+	// tempFile.Write(fileBytes)
+	// return that we have successfully uploaded our file!
+	responJSON(w, http.StatusOK, out)
 }
 
 /*//////////////////////////
@@ -235,7 +272,8 @@ func (rs *RestSrv) HandleUploadValidatorDocs(w http.ResponseWriter, r *http.Requ
 func (rs *RestSrv) HandleGetWorkReviewByWorkID(w http.ResponseWriter, r *http.Request) {
 	web3Address, err := rs.getWeb3Address(r)
 	if err != nil {
-		responError(w, http.StatusBadGateway, err.Error())
+		responError(w, http.StatusUnauthorized, err.Error())
+
 		return
 	}
 
@@ -243,16 +281,19 @@ func (rs *RestSrv) HandleGetWorkReviewByWorkID(w http.ResponseWriter, r *http.Re
 	workId, ok := vars["work_id"]
 	if !ok {
 		responError(w, http.StatusBadRequest, "null request param")
+
 		return
 	}
-	rs.logger.Info(fmt.Sprintf("request work id: %s", workId))
+	rs.logger.Infof("request work id: %s", workId)
 
 	review, err := rs.libSrv.GetValidatorWorkReviewByWorkID(
+		r.Context(),
 		web3Address,
 		workId,
 	)
 	if err != nil {
-		responError(w, http.StatusBadRequest, err.Error())
+		responError(w, http.StatusInternalServerError, err.Error())
+
 		return
 	}
 
@@ -273,13 +314,15 @@ func (rs *RestSrv) HandleGetWorkReviewByWorkID(w http.ResponseWriter, r *http.Re
 func (rs *RestSrv) HandleEvaluateWork(w http.ResponseWriter, r *http.Request) {
 	web3Address, err := rs.getWeb3Address(r)
 	if err != nil {
-		responError(w, http.StatusBadGateway, err.Error())
+		responError(w, http.StatusUnauthorized, err.Error())
+
 		return
 	}
 
 	request := new(WorkReviewRequest)
 	if err := rs.getRequest(r.Body, request); err != nil {
 		responError(w, http.StatusBadRequest, err.Error())
+
 		return
 	}
 
@@ -289,7 +332,7 @@ func (rs *RestSrv) HandleEvaluateWork(w http.ResponseWriter, r *http.Request) {
 		request.Review,
 	)
 	if err != nil {
-		responError(w, http.StatusBadRequest, err.Error())
+		responError(w, http.StatusInternalServerError, err.Error())
 
 		return
 	}
@@ -312,7 +355,7 @@ func (rs *RestSrv) HandleEvaluateWork(w http.ResponseWriter, r *http.Request) {
 func (rs *RestSrv) HandleSubmitWorkReview(w http.ResponseWriter, r *http.Request) {
 	web3Address, err := rs.getWeb3Address(r)
 	if err != nil {
-		responError(w, http.StatusBadGateway, err.Error())
+		responError(w, http.StatusUnauthorized, err.Error())
 
 		return
 	}
@@ -327,7 +370,7 @@ func (rs *RestSrv) HandleSubmitWorkReview(w http.ResponseWriter, r *http.Request
 
 	statusAsString := vars["status"]
 
-	rs.logger.Info(fmt.Sprintf("request work id: %s", workID))
+	rs.logger.Infof("request work id: %s", workID)
 
 	err = rs.libSrv.SubmitWorkReview(r.Context(), web3Address, workID, storage.StringToReviewStatus(statusAsString))
 	if err != nil {

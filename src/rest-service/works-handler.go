@@ -36,9 +36,10 @@ func (rs *RestSrv) HandleWorkByID(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
-	rs.logger.Info(fmt.Sprintf("request work id: %s", workID))
 
-	work, err := rs.libSrv.GetWorkByID(web3Address, workID)
+	rs.logger.Infof("request work id: %s", workID)
+
+	work, err := rs.libSrv.GetWorkByID(r.Context(), web3Address, workID)
 	if err != nil {
 		responError(w, http.StatusInternalServerError, err.Error())
 
@@ -75,7 +76,7 @@ func (rs *RestSrv) HandleAllWorks(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	works, err := rs.libSrv.GetAllWorks(web3Address)
+	works, err := rs.libSrv.GetAllWorks(r.Context(), web3Address)
 	if err != nil {
 		responError(w, http.StatusBadRequest, err.Error())
 
@@ -104,6 +105,7 @@ func (rs *RestSrv) HandleWorkByKeyWords(w http.ResponseWriter, r *http.Request) 
 			web3Address = ""
 		} else {
 			responError(w, http.StatusUnauthorized, fmt.Sprintf("while getting the decoding the jwt token, err: %v", err))
+
 			return
 		}
 	}
@@ -112,31 +114,36 @@ func (rs *RestSrv) HandleWorkByKeyWords(w http.ResponseWriter, r *http.Request) 
 	keyWordsReq, ok := vars["key_words"]
 	if !ok {
 		responError(w, http.StatusBadRequest, "null request param")
+
 		return
 	}
-	rs.logger.Info(fmt.Sprintf("request key words: %s", keyWordsReq))
+	rs.logger.Infof("request key words: %s", keyWordsReq)
 
 	keyWords := strings.Split(keyWordsReq, ",")
 	if len(keyWords) == 0 {
 		responError(w, http.StatusBadRequest, "null request param")
+
 		return
 	}
 
-	works, err := rs.libSrv.GetWorksByKeyWords(web3Address, keyWords)
+	works, err := rs.libSrv.GetWorksByKeyWords(r.Context(), web3Address, keyWords)
 	if err != nil {
-		responError(w, http.StatusBadRequest, err.Error())
+		responError(w, http.StatusInternalServerError, err.Error())
+
 		return
 	}
 	if works == nil {
 		responError(w, http.StatusOK, "there are no works in the library")
+
 		return
 	}
+
 	responJSON(w, http.StatusOK, works)
 }
 
 // HandlePublishWorkData PublishWorkData godoc
-// @Summary      TODO
-// @Description  TODO
+// @Summary      Mock work data
+// @Description  Mock work data
 // @Tags         Publish work
 // @Accept       json
 // @Produce      json
@@ -171,7 +178,7 @@ func (rs *RestSrv) HandlePublishWork(w http.ResponseWriter, r *http.Request) {
 
 	request := new(WorkReq)
 	if err := rs.getRequest(r.Body, request); err != nil {
-		responError(w, http.StatusBadRequest, err.Error())
+		responError(w, http.StatusInternalServerError, err.Error())
 
 		return
 	}
@@ -179,7 +186,7 @@ func (rs *RestSrv) HandlePublishWork(w http.ResponseWriter, r *http.Request) {
 	// TODO
 	workResp, _, err := rs.libSrv.PublishWork(r.Context(), web3Address, request.Work)
 	if err != nil {
-		responError(w, http.StatusBadRequest, err.Error())
+		responError(w, http.StatusInternalServerError, err.Error())
 
 		return
 	}
@@ -206,6 +213,7 @@ func (rs *RestSrv) HandleAuthorWorks(w http.ResponseWriter, r *http.Request) {
 	web3Address, err := rs.getWeb3Address(r)
 	if err != nil {
 		responError(w, http.StatusUnauthorized, err.Error())
+
 		return
 	}
 
@@ -213,19 +221,24 @@ func (rs *RestSrv) HandleAuthorWorks(w http.ResponseWriter, r *http.Request) {
 	we3Address, ok := vars["web3_address"]
 	if !ok {
 		responError(w, http.StatusBadRequest, "null request param")
+
 		return
 	}
-	rs.logger.Info(fmt.Sprintf("request author's (%s) works", we3Address))
 
-	works, err := rs.libSrv.GetWorksByAuthorAddress(web3Address, we3Address)
+	rs.logger.Infof("request author's (%s) works", we3Address)
+
+	works, err := rs.libSrv.GetWorksByAuthorAddress(r.Context(), web3Address, we3Address)
 	if err != nil {
 		responError(w, http.StatusBadRequest, err.Error())
+
 		return
 	}
 	if works == nil {
 		responJSON(w, http.StatusOK, "there are no pending works")
+
 		return
 	}
+
 	responJSON(w, http.StatusOK, works)
 }
 
@@ -250,6 +263,7 @@ func (rs *RestSrv) HandlePurchaseWork(w http.ResponseWriter, r *http.Request) {
 	web3Address, err := rs.getWeb3Address(r)
 	if err != nil {
 		responError(w, http.StatusUnauthorized, fmt.Sprintf("while getting the decoding the jwt token, err: %v", err))
+
 		return
 	}
 
@@ -257,17 +271,16 @@ func (rs *RestSrv) HandlePurchaseWork(w http.ResponseWriter, r *http.Request) {
 	workID, ok := vars["work_id"]
 	if !ok {
 		responError(w, http.StatusBadRequest, "null request param")
+
 		return
 	}
 	rs.logger.Info(fmt.Sprintf("request work id: %s", workID))
 
-	readerTxHash, authorTxHash, err := rs.libSrv.PurchaseWork(web3Address, workID)
-	if err != nil {
+	if err := rs.libSrv.PurchaseWork(r.Context(), web3Address, workID, false); err != nil {
 		responError(w, http.StatusBadRequest, err.Error())
+
 		return
 	}
-
-	rs.logger.Info(fmt.Sprintf("readerTxHash: %s| authorTxHash: %s", readerTxHash, authorTxHash))
 
 	responJSON(w, http.StatusOK, SuccessMsg{Msg: "OK"})
 }
@@ -322,23 +335,26 @@ func (rs *RestSrv) HandleAddInBookmarks(w http.ResponseWriter, r *http.Request) 
 	// get the reader's web3 address from the JWT token
 	web3Address, err := rs.getWeb3Address(r)
 	if err != nil {
-		rs.logger.Error(err.Error())
+		rs.logger.Errorf("HandleAddInBookmarks: %v", err)
 		responError(w, http.StatusUnauthorized, err.Error())
+
 		return
 	}
 	// get the work id from the request params
 	vars := mux.Vars(r)
 	workId, ok := vars["work_id"]
 	if !ok {
-		rs.logger.Error(err.Error())
+		rs.logger.Errorf("HandleAddInBookmarks: %v", err)
 		responError(w, http.StatusBadRequest, "null request param")
+
 		return
 	}
 	rs.logger.Info(fmt.Sprintf("request work id: %s", workId))
 
 	if err := rs.libSrv.CreateBookmark(web3Address, workId); err != nil {
-		rs.logger.Error(err.Error())
-		responError(w, http.StatusBadRequest, fmt.Sprintf("something went wrong while creating a new bookmark, err: %v", err))
+		rs.logger.Errorf("HandleAddInBookmarks: %v", err)
+		responError(w, http.StatusInternalServerError, fmt.Sprintf("something went wrong while creating a new bookmark, err: %v", err))
+
 		return
 	}
 
@@ -360,15 +376,17 @@ func (rs *RestSrv) HandleGetBookmarks(w http.ResponseWriter, r *http.Request) {
 	// get the reader's web3 address from the JWT token
 	web3Address, err := rs.getWeb3Address(r)
 	if err != nil {
-		rs.logger.Error(err.Error())
+		rs.logger.Errorf("HandleGetBookmarks: %v", err)
 		responError(w, http.StatusUnauthorized, err.Error())
+
 		return
 	}
 
-	bookmarks, err := rs.libSrv.GetBookmarksOf(web3Address)
+	bookmarks, err := rs.libSrv.GetBookmarksOf(r.Context(), web3Address)
 	if err != nil {
-		rs.logger.Error(err.Error())
-		responError(w, http.StatusBadRequest, err.Error())
+		rs.logger.Errorf("HandleGetBookmarks: %v", err)
+		responError(w, http.StatusInternalServerError, err.Error())
+
 		return
 	}
 
@@ -392,23 +410,26 @@ func (rs *RestSrv) HandleRemoveFromBookmarks(w http.ResponseWriter, r *http.Requ
 	// get the reader's web3 address from the JWT token
 	web3Address, err := rs.getWeb3Address(r)
 	if err != nil {
-		rs.logger.Error(err.Error())
+		rs.logger.Errorf("HandleRemoveFromBookmarks: %v", err)
 		responError(w, http.StatusUnauthorized, err.Error())
+
 		return
 	}
 	// get the work id from the request params
 	vars := mux.Vars(r)
 	workId, ok := vars["work_id"]
 	if !ok {
-		rs.logger.Error(err.Error())
+		rs.logger.Errorf("HandleRemoveFromBookmarks: %v", err)
 		responError(w, http.StatusBadRequest, "null request param")
+
 		return
 	}
-	rs.logger.Info(fmt.Sprintf("request work id: %s", workId))
+	rs.logger.Info("HandleRemoveFromBookmarks: request work id: %s", workId)
 
 	if err := rs.libSrv.RemoveBookmark(web3Address, workId); err != nil {
-		rs.logger.Error(err.Error())
-		responError(w, http.StatusUnauthorized, err.Error())
+		rs.logger.Errorf("HandleRemoveFromBookmarks: %v", err)
+		responError(w, http.StatusInternalServerError, err.Error())
+
 		return
 	}
 
@@ -422,25 +443,29 @@ func (rs *RestSrv) HandleApproveWork(w http.ResponseWriter, r *http.Request) {
 	workId, ok := vars["work_id"]
 	if !ok {
 		responError(w, http.StatusBadRequest, "null request param")
+
 		return
 	}
-	rs.logger.Info(fmt.Sprintf("request work id: %s", workId))
+	rs.logger.Infof("HandleApproveWork: request work id: %s", workId)
 
-	if err := rs.libSrv.ApproveWork(workId); err != nil {
-		responError(w, http.StatusBadRequest, err.Error())
+	if err := rs.libSrv.ApproveWork(r.Context(), workId); err != nil {
+		responError(w, http.StatusInternalServerError, err.Error())
+
 		return
 	}
 	responJSON(w, http.StatusOK, "ok") // TODO
 }
 
 func (rs *RestSrv) HandlePendingWorks(w http.ResponseWriter, r *http.Request) {
-	works, err := rs.libSrv.GetPendingWorks()
+	works, err := rs.libSrv.GetPendingWorks(r.Context())
 	if err != nil {
-		responError(w, http.StatusBadRequest, err.Error())
+		responError(w, http.StatusInternalServerError, err.Error())
+
 		return
 	}
 	if works == nil {
 		responJSON(w, http.StatusOK, "there are no pending works")
+
 		return
 	}
 	responJSON(w, http.StatusOK, works)
@@ -451,13 +476,16 @@ func (rs *RestSrv) HandleRemoveWork(w http.ResponseWriter, r *http.Request) {
 	workId, ok := vars["work_id"]
 	if !ok {
 		responError(w, http.StatusBadRequest, "null request param")
-		return
-	}
-	rs.logger.Info(fmt.Sprintf("request work id: %s", workId))
 
-	if err := rs.libSrv.RemoveWork(workId); err != nil {
-		responError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	rs.logger.Infof("HandleRemoveWork: request work id: %s", workId)
+
+	if err := rs.libSrv.RemoveWork(r.Context(), workId); err != nil {
+		responError(w, http.StatusInternalServerError, err.Error())
+
+		return
+	}
+
 	responJSON(w, http.StatusOK, "OK") // TODO
 }

@@ -1,14 +1,14 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
 
-	proto "github.com/SeaOfWisdom/sow_proto/lib-srv"
-
 	"github.com/SeaOfWisdom/sow_library/src/config"
 	srv "github.com/SeaOfWisdom/sow_library/src/service"
+	proto "github.com/SeaOfWisdom/sow_proto/lib-srv"
 
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"google.golang.org/grpc"
@@ -26,10 +26,12 @@ func NewGrpcServer(config *config.Config, service *srv.LibrarySrv) *GrpcServer {
 	if err != nil {
 		log.Fatalf("could not listen to the address %s, err: %v", config.GrpcAddress, err)
 	}
+
 	serverOps := []grpc.ServerOption{
 		grpc.StreamInterceptor(grpcprometheus.StreamServerInterceptor),
 		grpc.UnaryInterceptor(grpcprometheus.UnaryServerInterceptor),
 	}
+
 	instance := &GrpcServer{
 		service:  service,
 		server:   grpc.NewServer(serverOps...),
@@ -48,6 +50,15 @@ func (gs *GrpcServer) Start() {
 			panic(fmt.Errorf("failed to serve gRPC: %v", err))
 		}
 	}()
+}
+
+// PutWork ...
+func (gs *GrpcServer) MakeAsPurchased(ctx context.Context, req *proto.MakeAsPurchasedRequest) (*proto.Null, error) {
+	if err := gs.service.PurchaseWork(ctx, req.ReaderAddress, req.WorkId, true); err != nil {
+		return nil, err
+	}
+
+	return &proto.Null{}, nil
 }
 
 func (s *GrpcServer) Stop() {

@@ -3,36 +3,35 @@ package storage
 import (
 	"context"
 	"errors"
-	"fmt"
-
 	"gorm.io/gorm"
 )
 
-func (ss *StorageSrv) GetBookmarksByParticipantID(participantID string) (bookmarks []*WorkResponse, err error) {
+func (ss *StorageSrv) GetBookmarksByParticipantID(ctx context.Context, participantID string) (bookmarks []*WorkResponse, err error) {
 	// get the participant's id
 	workIDs, err := ss.getPacticipantBookmarkIDs(participantID)
 	if err != nil {
 		return
 	}
 	if len(workIDs) == 0 {
-		return nil, nil
+		return
 	}
 
 	// get works by the ids
 	filter := make(map[string]interface{})
 	filter["id"] = workIDs
 	// gonna search by ids
-	mongoWorks, err := ss.getWorksByFilter(context.TODO(), filter)
+	mongoWorks, err := ss.getWorksByFilter(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, mWork := range mongoWorks {
 		// get author info
-		author, err := ss.GetAuthorById(mWork.AuthorID)
+		author, err := ss.GetAuthorById(ctx, mWork.AuthorID)
 		if err != nil {
-			ss.log.Error(fmt.Sprintf("while getting the inforamation regarding the author with id %s, err: %v", mWork.AuthorID, err))
+			ss.log.Errorf("while getting the inforamation regarding the author with id %s, err: %v", mWork.AuthorID, err)
 		}
+
 		participant := ss.GetParticipantById(mWork.AuthorID)
 		// the participant status is Reader just to show the annotation and
 		// other preview information of work
@@ -42,17 +41,19 @@ func (ss *StorageSrv) GetBookmarksByParticipantID(participantID string) (bookmar
 	return bookmarks, nil
 }
 
-func (ss *StorageSrv) BookmarkedWorkOrNot(participantID, workID string) bool {
+func (ss *StorageSrv) BookmarkedWorkOrNot(participantID, workID string) (out bool) {
 	var bookmark *ParticipantsBookmark
 	if err := ss.psqlDB.Where("participant_id = ? and work_id = ?", participantID, workID).First(&bookmark).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return false
+			return
 		}
-		ss.log.Error(fmt.Sprintf("while BookmarkedWorkOrNot, err: %v", err))
-		return false
+
+		ss.log.Errorf("while BookmarkedWorkOrNot, err: %v", err)
+
+		return
 	}
 	if bookmark.ID == "" {
-		return false
+		return
 	}
 
 	return true
