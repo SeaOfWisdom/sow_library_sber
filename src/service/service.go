@@ -16,7 +16,10 @@ const (
 	faucetCount = "50000000000000000000" // 50 ETH
 )
 
-var ErrNoReviews = errors.New("there are no reviews")
+var (
+	ErrNoReviews            = errors.New("there are no reviews")
+	ErrValidationNotAllowed = errors.New("validation now allowed")
+)
 
 type LibrarySrv struct {
 	log     *log.Logger
@@ -37,6 +40,7 @@ func NewLibrarySrv(log *log.Logger, str *storage.StorageSrv, contractorSrv contr
 }
 
 func (ls *LibrarySrv) Start() {
+	ls.MigrateFromMongo()
 	// // get all works from the library
 	// works, err := lb.GetAllWorks(config.AdminAddresses["chillhacker"])
 	// if err != nil {
@@ -385,15 +389,18 @@ func (ls *LibrarySrv) PublishWork(ctx context.Context, authorAddress string, wor
 		return nil, "", err
 	}
 
-	ls.contractorSrv.PublishWork(ctx, &contractor.PublishWorkRequest{
+	txHash, err := ls.contractorSrv.PublishWork(ctx, &contractor.PublishWorkRequest{
+		Authors: []string{authorAddress},
 		Name:    work.Name,
 		Uri:     "DUMMY URI",
-		WorkId:  workResp.Work.ID,
-		Authors: []string{authorAddress},
+		WorkId:  uuidToUint256(workResp.Work.ID),
 		Price:   faucetCount,
 	})
+	if err != nil {
+		ls.log.Errorf("PublishWork: publish work via contractor, err: %v", err)
+	}
 
-	return workResp, "TX_ID", nil
+	return workResp, txHash.TxHash, nil
 }
 
 // PurchaseWork ...
@@ -652,6 +659,17 @@ func (ls *LibrarySrv) CreateOrUpdateWorkReview(ctx context.Context, validatorAdd
 
 	if participant.Role < storage.ValidatorRole {
 		return nil, fmt.Errorf("the participant is not validator")
+	}
+
+	work, err := ls.storage.GetWorkByID(ctx, review.WorkID)
+	if err != nil {
+		ls.log.Errorf("CreateOrUpdateWorkReview: error get work by id, err: %v", err)
+
+		return nil, fmt.Errorf("while get work by id, err: %v", err)
+	}
+
+	if work.Author.BasicInfo.ID == participant.ID {
+		return nil, ErrValidationNotAllowed
 	}
 
 	review, updateRrr := ls.storage.UpdateOrCreateWorkReview(ctx, participant.ID, review)

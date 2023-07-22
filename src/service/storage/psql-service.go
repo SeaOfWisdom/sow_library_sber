@@ -171,7 +171,7 @@ func (ss *StorageSrv) getParticipantWorks(participantID string) []*ParticipantsW
 	return works
 }
 
-func (ss *StorageSrv) getAllParticipantsWorks() []*ParticipantsWork {
+func (ss *StorageSrv) GetAllParticipantsWorks() []*ParticipantsWork {
 	var works []*ParticipantsWork
 	if err := ss.psqlDB.Where("status <> ?", DeclinedWorkStatus).Find(&works).Error; err != nil {
 		ss.log.Error(fmt.Sprintf("while getAllParticipantWorks, err: %v", err))

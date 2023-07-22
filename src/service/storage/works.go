@@ -74,7 +74,7 @@ func (ss *StorageSrv) GetAllWorks(ctx context.Context, readerAddress string) (re
 		}
 	}
 
-	participantsWorks := ss.getAllParticipantsWorks()
+	participantsWorks := ss.GetAllParticipantsWorks()
 	response = make([]*WorkResponse, 0, len(participantsWorks))
 	if len(participantsWorks) == 0 {
 		return
@@ -134,7 +134,7 @@ func (ss *StorageSrv) GetWorkByKeyWords(ctx context.Context, readerAddress strin
 		}
 	}
 
-	participantsWorks := ss.getAllParticipantsWorks()
+	participantsWorks := ss.GetAllParticipantsWorks()
 	if participantsWorks == nil {
 		return nil, fmt.Errorf("there are no works in the library:(")
 	}
@@ -176,7 +176,7 @@ func (ss *StorageSrv) GetPurchasedWorks(ctx context.Context, readerAddress strin
 		return nil, fmt.Errorf("haven't got the reader: %s", readerAddress)
 	}
 
-	participantsWorks := ss.getAllParticipantsWorks()
+	participantsWorks := ss.GetAllParticipantsWorks()
 	if len(participantsWorks) == 0 {
 		return []*WorkResponse{}, nil
 	}
@@ -394,7 +394,7 @@ func (ss *StorageSrv) upsertWorksWithoutStatus(ctx context.Context) (err error) 
 		return
 	}
 
-	pWorks := ss.getAllParticipantsWorks()
+	pWorks := ss.GetAllParticipantsWorks()
 
 	for _, mw := range works {
 		for _, pw := range pWorks {

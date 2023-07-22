@@ -332,6 +332,12 @@ func (rs *RestSrv) HandleEvaluateWork(w http.ResponseWriter, r *http.Request) {
 		request.Review,
 	)
 	if err != nil {
+		if errors.Is(err, srv.ErrValidationNotAllowed) {
+			responError(w, http.StatusForbidden, err.Error())
+
+			return
+		}
+
 		responError(w, http.StatusInternalServerError, err.Error())
 
 		return

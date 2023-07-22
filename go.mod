@@ -3,7 +3,7 @@ module github.com/SeaOfWisdom/sow_library
 go 1.19
 
 require (
-	github.com/SeaOfWisdom/sow_proto v0.0.0-20230719113458-90999dab4238
+	github.com/SeaOfWisdom/sow_proto v0.0.0-20230721115747-1eb47e5f5681
 	github.com/sirupsen/logrus v1.9.3
 	github.com/swaggo/swag v1.16.1
 	go.mongodb.org/mongo-driver v1.12.0
